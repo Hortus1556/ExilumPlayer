@@ -1,0 +1,14 @@
+{
+  "uniqueId": "native.minimp3",
+  "name": "minimp3",
+  "description": "Decodes MP3 samples inside modules, for libopenmpt.",
+  "website": "https://github.com/lieff/minimp3",
+  "licenses": [
+    "cc0-1.0"
+  ],
+  "developers": [
+    {
+      "name": "lieff"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "uniqueId": "native.hively",
+  "name": "HivelyTracker replayer",
+  "description": "Plays AHX and HivelyTracker songs.",
+  "website": "https://github.com/pete-gordon/hivelytracker",
+  "licenses": [
+    "hively-bsd-3-clause"
+  ],
+  "developers": [
+    {
+      "name": "Pete Gordon"
+    }
+  ]
+}

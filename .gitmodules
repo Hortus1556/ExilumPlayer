@@ -1,0 +1,31 @@
+[submodule "renderer/src/main/cpp/openmpt"]
+	path = renderer/src/main/cpp/openmpt
+	url = https://github.com/OpenMPT/openmpt.git
+	shallow = true
+[submodule "renderer/src/main/cpp/libbinio"]
+	path = renderer/src/main/cpp/libbinio
+	url = https://github.com/adplug/libbinio.git
+[submodule "renderer/src/main/cpp/furnace"]
+	path = renderer/src/main/cpp/furnace
+	url = https://github.com/tildearrow/furnace.git
+	shallow = true
+[submodule "renderer/src/main/cpp/libsidplayfp"]
+	path = renderer/src/main/cpp/libsidplayfp
+	url = https://github.com/libsidplayfp/libsidplayfp
+	shallow = true
+[submodule "renderer/src/main/cpp/libresidfp"]
+	path = renderer/src/main/cpp/libresidfp
+	url = https://github.com/libsidplayfp/libresidfp
+	shallow = true
+[submodule "renderer/src/main/cpp/mgba"]
+	path = renderer/src/main/cpp/mgba
+	url = https://github.com/mgba-emu/mgba.git
+	shallow = true
+[submodule "renderer/src/main/cpp/signalsmith-stretch"]
+	path = renderer/src/main/cpp/signalsmith-stretch
+	url = https://github.com/Signalsmith-Audio/signalsmith-stretch.git
+	shallow = true
+[submodule "renderer/src/main/cpp/signalsmith-linear"]
+	path = renderer/src/main/cpp/signalsmith-linear
+	url = https://github.com/Signalsmith-Audio/linear.git
+	shallow = true

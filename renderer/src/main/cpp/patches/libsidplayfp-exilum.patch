@@ -1,0 +1,162 @@
+diff --git a/src/builders/residfp-builder/residfp-emu.cpp b/src/builders/residfp-builder/residfp-emu.cpp
+index 739aa9b..7a44748 100644
+--- a/src/builders/residfp-builder/residfp-emu.cpp
++++ b/src/builders/residfp-builder/residfp-emu.cpp
+@@ -94,6 +94,14 @@ void reSIDfpEmu::clock()
+ {
+     const event_clock_t cycles = eventScheduler->getTime(EVENT_CLOCK_PHI1) - m_accessClk;
+     m_accessClk += cycles;
++    // Local change (Exilum Player): silent running and voice taps - see sidemu.
++    if (m_silent)
++    {
++        m_sid.clockSilent(cycles);
++        return;
++    }
++    if (m_tap[0] != nullptr)
++        m_sid.setVoiceTaps(m_tap[0] + m_bufferpos, m_tap[1] + m_bufferpos, m_tap[2] + m_bufferpos);
+     m_bufferpos += m_sid.clock(cycles, m_buffer+m_bufferpos);
+ }
+ 
+diff --git a/src/builders/residfp-builder/residfp-emu.h b/src/builders/residfp-builder/residfp-emu.h
+index 99a69d2..239418d 100644
+--- a/src/builders/residfp-builder/residfp-emu.h
++++ b/src/builders/residfp-builder/residfp-emu.h
+@@ -61,6 +61,19 @@ public:
+     // Standard SID emu functions
+     void clock() override;
+ 
++    // Local addition (Exilum Player) - see sidemu::voiceTaps.
++    void voiceTaps(short* voice1, short* voice2, short* voice3) override
++    {
++        m_tap[0] = voice1;
++        m_tap[1] = voice2;
++        m_tap[2] = voice3;
++    }
++
++private:
++    short* m_tap[3] = { nullptr, nullptr, nullptr };
++
++public:
++
+     void sampling(float systemclock, float freq,
+         SidConfig::sampling_method_t method) override;
+ 
+diff --git a/src/player.cpp b/src/player.cpp
+index c887043..d6ce456 100644
+--- a/src/player.cpp
++++ b/src/player.cpp
+@@ -579,6 +579,20 @@ void Player::sidParams(double cpuFreq, int frequency,
+     }
+ }
+ 
++// Local addition (Exilum Player)
++void Player::voiceTaps(unsigned int sidNum, short* voice1, short* voice2, short* voice3)
++{
++    if (sidemu *s = (sidNum < m_chips.size()) ? m_chips[sidNum] : nullptr)
++        s->voiceTaps(voice1, voice2, voice3);
++}
++
++// Local addition (Exilum Player)
++void Player::silent(bool enable)
++{
++    for (sidemu *s: m_chips)
++        s->silent(enable);
++}
++
+ bool Player::getSidStatus(unsigned int sidNum, uint8_t regs[32])
+ {
+     if (sidNum >= m_chips.size())
+diff --git a/src/player.h b/src/player.h
+index ab30df1..b3fc269 100644
+--- a/src/player.h
++++ b/src/player.h
+@@ -158,6 +158,10 @@ public:
+ 
+     bool getSidStatus(unsigned int sidNum, uint8_t regs[32]);
+ 
++    // Local additions (Exilum Player) - see sidplayfp::voiceTaps and sidplayfp::silent.
++    void voiceTaps(unsigned int sidNum, short* voice1, short* voice2, short* voice3);
++    void silent(bool enable);
++
+     unsigned int installedSIDs() const { return m_chips.size(); }
+ 
+     void initMixer(bool stereo);
+diff --git a/src/sidemu.h b/src/sidemu.h
+index 5421ad2..6c99a8d 100644
+--- a/src/sidemu.h
++++ b/src/sidemu.h
+@@ -113,6 +113,25 @@ public:
+      */
+     void voice(unsigned int voice, bool mute);
+ 
++    /**
++     * Local addition (Exilum Player): buffers, as large as the sample buffer,
++     * that receive each of the three voices' own output at the same index as
++     * the audio. Emulations that cannot split their voices ignore it.
++     */
++    virtual void voiceTaps(short* voice1, short* voice2, short* voice3) {}
++
++    /**
++     * Local addition (Exilum Player): while enabled the chip only keeps the
++     * state a tune can read back (OSC3 and ENV3) and produces no audio - for
++     * running a tune forward to a position quickly.
++     */
++    void silent(bool enable) { m_silent = enable; }
++
++protected:
++    bool m_silent = false;
++
++public:
++
+     /**
+      * Enable/disable filter.
+      */
+diff --git a/src/sidplayfp/sidplayfp.cpp b/src/sidplayfp/sidplayfp.cpp
+index c04cfc4..bef9b25 100644
+--- a/src/sidplayfp/sidplayfp.cpp
++++ b/src/sidplayfp/sidplayfp.cpp
+@@ -127,6 +127,18 @@ bool sidplayfp::getSidStatus(unsigned int sidNum, uint8_t regs[32])
+     return sidplayer.getSidStatus(sidNum, regs);
+ }
+ 
++// Local addition (Exilum Player)
++void sidplayfp::voiceTaps(unsigned int sidNum, short* voice1, short* voice2, short* voice3)
++{
++    sidplayer.voiceTaps(sidNum, voice1, voice2, voice3);
++}
++
++// Local addition (Exilum Player)
++void sidplayfp::silent(bool enable)
++{
++    sidplayer.silent(enable);
++}
++
+ unsigned int sidplayfp::installedSIDs() const
+ {
+     return sidplayer.installedSIDs();
+diff --git a/src/sidplayfp/sidplayfp.h b/src/sidplayfp/sidplayfp.h
+index 8a3120d..c5f91ce 100644
+--- a/src/sidplayfp/sidplayfp.h
++++ b/src/sidplayfp/sidplayfp.h
+@@ -226,6 +226,21 @@ public:
+      */
+     bool getSidStatus(unsigned int sidNum, uint8_t regs[32]);
+ 
++    /**
++     * Local addition (Exilum Player): buffers that receive each voice of SID
++     * [sidNum] alongside the audio #play produces, at the same indices. Each
++     * must hold as many samples as #play can produce in one call. Ignored by
++     * emulations that cannot split their voices; nullptr for none.
++     */
++    void voiceTaps(unsigned int sidNum, short* voice1, short* voice2, short* voice3);
++
++    /**
++     * Local addition (Exilum Player): while enabled #play runs the tune but
++     * the SID chips produce no audio, and it returns no samples - for moving
++     * a tune forward to a position far faster than playing it.
++     */
++    void silent(bool enable);
++
+     /**
+      * Get the required size of the buffer for the number of cycles to run,
+      * approximate value by excess.

@@ -1,0 +1,94 @@
+diff --git a/src/SID.h b/src/SID.h
+index c2cddea..034641b 100644
+--- a/src/SID.h
++++ b/src/SID.h
+@@ -183,6 +183,39 @@ public:
+     SID();
+     ~SID();
+ 
++    /**
++     * Local addition (Exilum Player): buffers that receive each voice's own
++     * output alongside the mixed audio, one value for every sample clock()
++     * writes, at the same index. The voice's waveform times its envelope,
++     * through the chip's DACs - before the filter and the master volume -
++     * scaled so a full-scale waveform at full envelope reads about +-32767
++     * (the DACs are normalised: the waveform to about +-0.5, the envelope to 0..1).
++     * nullptr for none, which is the default.
++     */
++    void setVoiceTaps(int16_t* voice1, int16_t* voice2, int16_t* voice3)
++    {
++        voiceTap[0] = voice1;
++        voiceTap[1] = voice2;
++        voiceTap[2] = voice3;
++    }
++
++private:
++    int16_t* voiceTap[3] = { nullptr, nullptr, nullptr };
++
++    /** Writes each voice's output to its tap at [index] - see setVoiceTaps. */
++    void tapVoices(int index)
++    {
++        if (voiceTap[0] == nullptr)
++            return;
++        for (int v = 0; v < 3; v++)
++        {
++            const float out = voice[v].output() * 65534.0f;
++            voiceTap[v][index] = static_cast<int16_t>(out > 32767.0f ? 32767.0f : (out < -32768.0f ? -32768.0f : out));
++        }
++    }
++
++public:
++
+     /**
+      * Set chip model.
+      *
+@@ -428,6 +461,7 @@ int SID::clock(unsigned int cycles, int16_t* buf)
+                 int32_t output = clockFilt();
+                 if (unlikely(resampler->input(output)))
+                 {
++                    tapVoices(s);  // local addition (Exilum Player)
+                     buf[s++] = resampler->getOutput(scaleFactor);
+                 }
+             }
+@@ -469,6 +503,7 @@ int SID::clock(int16_t* buf, int bufSize)
+                 int32_t output = clockFilt();
+                 if (unlikely(resampler->input(output)))
+                 {
++                    tapVoices(s);  // local addition (Exilum Player)
+                     buf[s++] = resampler->getOutput(scaleFactor);
+                     if (unlikely(s == bufSize))
+                     {
+diff --git a/src/residfp/residfp.cpp b/src/residfp/residfp.cpp
+index e6e7733..989b4b5 100644
+--- a/src/residfp/residfp.cpp
++++ b/src/residfp/residfp.cpp
+@@ -130,6 +130,12 @@ void residfp::clockSilent(unsigned int cycles)
+     sid.clockSilent(cycles);
+ }
+ 
++// Local addition (Exilum Player)
++void residfp::setVoiceTaps(short* voice1, short* voice2, short* voice3)
++{
++    sid.setVoiceTaps(voice1, voice2, voice3);
++}
++
+ void residfp::setFilter6581Curve(double filterCurve)
+ {
+     sid.setFilter6581Curve(filterCurve);
+diff --git a/src/residfp/residfp.h b/src/residfp/residfp.h
+index 2fcc999..ab36722 100644
+--- a/src/residfp/residfp.h
++++ b/src/residfp/residfp.h
+@@ -205,6 +205,12 @@ public:
+      */
+     void clockSilent(unsigned int cycles);
+ 
++    /**
++     * Local addition (Exilum Player): each voice's own output alongside the
++     * audio clock() produces - see SID::setVoiceTaps.
++     */
++    void setVoiceTaps(short* voice1, short* voice2, short* voice3);
++
+     /**
+      * Set filter curve parameter for 6581 model.
+      *

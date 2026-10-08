@@ -1,0 +1,15 @@
+{
+  "uniqueId": "native.furnace",
+  "name": "Furnace",
+  "description": "The chiptune tracker's engine, for Furnace and DefleMask modules.",
+  "artifactVersion": "0.6.8.3",
+  "website": "https://github.com/tildearrow/furnace",
+  "licenses": [
+    "gpl-2.0-or-later"
+  ],
+  "developers": [
+    {
+      "name": "tildearrow and contributors"
+    }
+  ]
+}

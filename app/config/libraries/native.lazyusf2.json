@@ -1,0 +1,38 @@
+{
+  "uniqueId": "native.lazyusf2",
+  "name": "lazyusf2",
+  "description": "Plays Nintendo 64 music (USF): the Mupen64Plus emulator, cut down to the console's sound. It carries Iconoclast's RSP interpreter (CC0-1.0) and X-Scale's CIC code (BSD-2-Clause).",
+  "artifactVersion": "421f00b",
+  "website": "https://gitlab.com/kode54/lazyusf2",
+  "licenses": [
+    "gpl-2.0-or-later",
+    "cc0-1.0",
+    "xscale-bsd-2-clause"
+  ],
+  "developers": [
+    {
+      "name": "Hacktarux"
+    },
+    {
+      "name": "Richard Goedeken"
+    },
+    {
+      "name": "Bobby Smiles"
+    },
+    {
+      "name": "CasualJames"
+    },
+    {
+      "name": "Iconoclast"
+    },
+    {
+      "name": "X-Scale"
+    },
+    {
+      "name": "The Mupen64Plus team"
+    },
+    {
+      "name": "Christopher Snowhill"
+    }
+  ]
+}

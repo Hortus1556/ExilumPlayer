@@ -1,0 +1,25 @@
+{
+  "uniqueId": "native.aopsf",
+  "name": "aopsf",
+  "description": "Plays PlayStation music (PSF): the Audio Overload SDK's emulation of the console, with the sound unit and the counters of Neill Corlett's Highly Experimental (GPL-3.0). The processor it runs on is Exilum's own, written to behave as the MAME core the engine came with.",
+  "artifactVersion": "8213121",
+  "website": "https://gitlab.com/kode54/aopsf",
+  "licenses": [
+    "aopsf-bsd-3-clause",
+    "gpl-3.0-only"
+  ],
+  "developers": [
+    {
+      "name": "R. Belmont"
+    },
+    {
+      "name": "Richard Bannister"
+    },
+    {
+      "name": "Neill Corlett"
+    },
+    {
+      "name": "Christopher Snowhill"
+    }
+  ]
+}

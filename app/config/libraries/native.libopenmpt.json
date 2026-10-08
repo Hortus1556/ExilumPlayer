@@ -1,0 +1,18 @@
+{
+  "uniqueId": "native.libopenmpt",
+  "name": "libopenmpt",
+  "description": "Renders tracker music: MOD, XM, IT, S3M and dozens more. The reverb, chorus, surround and equalizer in the audio settings are adapted from its code.",
+  "artifactVersion": "0.9.0-pre.13",
+  "website": "https://lib.openmpt.org/libopenmpt/",
+  "licenses": [
+    "libopenmpt-bsd-3-clause"
+  ],
+  "developers": [
+    {
+      "name": "OpenMPT Project Developers and Contributors"
+    },
+    {
+      "name": "Olivier Lapicque"
+    }
+  ]
+}

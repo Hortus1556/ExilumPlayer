@@ -1,0 +1,735 @@
+diff --git a/libopenmpt/libopenmpt.h b/libopenmpt/libopenmpt.h
+index 486cada5b..6bdd375dd 100644
+--- a/libopenmpt/libopenmpt.h
++++ b/libopenmpt/libopenmpt.h
+@@ -659,6 +659,45 @@ LIBOPENMPT_API int openmpt_probe_file_header_from_stream( uint64_t flags, openmp
+  */
+ typedef struct openmpt_module openmpt_module;
+ 
++typedef struct openmpt_module_current_channel_state {
++	int32_t volume;
++	int32_t final_volume;
++	int32_t pan;
++	int32_t instrument;
++	int32_t key;
++	int32_t period;
++	int32_t position;
++	int64_t increment;
++	int32_t pitchbend;
++	int32_t note;
++	int32_t sample;
++	int32_t muted;
++	/* The volume the channel is mixed at, 0 to 16384: its volume with envelopes, fade-out and
++	   the channel, instrument and sample global volumes applied - and the song's global volume
++	   too, unless that is applied to the master mix instead (play.global_volume_applies_to_master).
++	   Pan not applied. */
++	int32_t real_volume;
++	/* How loud the channel really came out over the last read call, its background (NNA)
++	   voices included, measured on the mixed audio: 16384 for a full-scale sample at a
++	   real_volume of 16384. Pan and master gain not applied; can exceed 16384 slightly
++	   through resonant filters. */
++	int32_t output_level;
++	/* The OPL voice the channel plays on, for openmpt_module_get_opl_scope; -1 when it plays a sample
++	   or nothing. Such a channel has no sample data: its level is in output_level all the same. */
++	int32_t opl_voice;
++} openmpt_module_current_channel_state;
++
++typedef struct openmpt_module_sample_state {
++	const void * data;
++	int32_t length;
++	int32_t loop_start;
++	int32_t loop_end;
++	int32_t flags;
++	int32_t c5speed;
++	int32_t channels;
++	int32_t bits_per_sample;
++} openmpt_module_sample_state;
++
+ typedef struct openmpt_module_initial_ctl {
+ 	const char * ctl;
+ 	const char * value;
+@@ -1275,6 +1314,21 @@ LIBOPENMPT_API float openmpt_module_get_current_channel_vu_rear_left( openmpt_mo
+  */
+ LIBOPENMPT_API float openmpt_module_get_current_channel_vu_rear_right( openmpt_module * mod, int32_t channel );
+ 
++LIBOPENMPT_API int openmpt_module_get_current_channel_state( openmpt_module * mod, int32_t channel, openmpt_module_current_channel_state * state );
++LIBOPENMPT_API int openmpt_module_get_sample_state( openmpt_module * mod, int32_t sample, openmpt_module_sample_state * state );
++/* status: 0 unmutes, 1 mutes for the listener, 2 mutes as the file itself has the channel muted
++   (a module can be saved with channels switched off, and Scream Tracker treats those differently
++   from one merely not heard), negative asks. Returns whether it was muted before, or -1. */
++LIBOPENMPT_API int32_t openmpt_module_channel_mute( openmpt_module * mod, int32_t channel, int32_t status );
++/* Frames the module's OPL chip has mixed since it was loaded or last sought; 0 for a module without one.
++   Read after a read call, it names that call's last frame, for openmpt_module_get_opl_scope. */
++LIBOPENMPT_API uint64_t openmpt_module_get_opl_frames( openmpt_module * mod );
++/* An OPL voice's own output as a trace: [columns] signed bytes, [frames_per_column] frames apart, from
++   [start_frame] (as openmpt_module_get_opl_frames counts) where that much has been mixed since, and the
++   last that has where not. Fitted to the byte range. 0 when the voice is none or the frames are too
++   long ago to have been kept, which is a little over a second at 48 kHz. */
++LIBOPENMPT_API int openmpt_module_get_opl_scope( openmpt_module * mod, int32_t voice, uint64_t start_frame, double frames_per_column, int32_t columns, int8_t * out );
++
+ /*! \brief Get the number of sub-songs
+  *
+  * \param mod The module handle to work on.
+diff --git a/libopenmpt/libopenmpt_c.cpp b/libopenmpt/libopenmpt_c.cpp
+index e61bff27b..2616ab71d 100644
+--- a/libopenmpt/libopenmpt_c.cpp
++++ b/libopenmpt/libopenmpt_c.cpp
+@@ -1111,6 +1111,96 @@ float openmpt_module_get_current_channel_vu_rear_right( openmpt_module * mod, in
+ 	return 0.0;
+ }
+ 
++int openmpt_module_get_current_channel_state( openmpt_module * mod, int32_t channel, openmpt_module_current_channel_state * state ) {
++	try {
++		openmpt::interface::check_soundfile( mod );
++		if ( !state ) {
++			throw openmpt::interface::argument_null_pointer();
++		}
++		openmpt::module_impl::current_channel_state cpp_state;
++		if ( !mod->impl->get_current_channel_state( channel, cpp_state ) ) {
++			return 0;
++		}
++		state->volume = cpp_state.volume;
++		state->final_volume = cpp_state.final_volume;
++		state->pan = cpp_state.pan;
++		state->instrument = cpp_state.instrument;
++		state->key = cpp_state.key;
++		state->period = cpp_state.period;
++		state->position = cpp_state.position;
++		state->increment = cpp_state.increment;
++		state->pitchbend = cpp_state.pitchbend;
++		state->note = cpp_state.note;
++		state->sample = cpp_state.sample;
++		state->muted = cpp_state.muted;
++		state->real_volume = cpp_state.real_volume;
++		state->output_level = cpp_state.output_level;
++		state->opl_voice = cpp_state.opl_voice;
++		return 1;
++	} catch ( ... ) {
++		openmpt::report_exception( __func__, mod );
++	}
++	return 0;
++}
++
++int openmpt_module_get_sample_state( openmpt_module * mod, int32_t sample, openmpt_module_sample_state * state ) {
++	try {
++		openmpt::interface::check_soundfile( mod );
++		if ( !state ) {
++			throw openmpt::interface::argument_null_pointer();
++		}
++		openmpt::module_impl::sample_state cpp_state;
++		if ( !mod->impl->get_sample_state( sample, cpp_state ) ) {
++			return 0;
++		}
++		state->data = cpp_state.data;
++		state->length = cpp_state.length;
++		state->loop_start = cpp_state.loop_start;
++		state->loop_end = cpp_state.loop_end;
++		state->flags = cpp_state.flags;
++		state->c5speed = cpp_state.c5speed;
++		state->channels = cpp_state.channels;
++		state->bits_per_sample = cpp_state.bits_per_sample;
++		return 1;
++	} catch ( ... ) {
++		openmpt::report_exception( __func__, mod );
++	}
++	return 0;
++}
++
++int32_t openmpt_module_channel_mute( openmpt_module * mod, int32_t channel, int32_t status ) {
++	try {
++		openmpt::interface::check_soundfile( mod );
++		return mod->impl->set_channel_mute( channel, status );
++	} catch ( ... ) {
++		openmpt::report_exception( __func__, mod );
++	}
++	return -1;
++}
++
++uint64_t openmpt_module_get_opl_frames( openmpt_module * mod ) {
++	try {
++		openmpt::interface::check_soundfile( mod );
++		return mod->impl->get_opl_frames();
++	} catch ( ... ) {
++		openmpt::report_exception( __func__, mod );
++	}
++	return 0;
++}
++
++int openmpt_module_get_opl_scope( openmpt_module * mod, int32_t voice, uint64_t start_frame, double frames_per_column, int32_t columns, int8_t * out ) {
++	try {
++		openmpt::interface::check_soundfile( mod );
++		if ( !out ) {
++			throw openmpt::interface::argument_null_pointer();
++		}
++		return mod->impl->get_opl_scope( voice, start_frame, frames_per_column, columns, out ) ? 1 : 0;
++	} catch ( ... ) {
++		openmpt::report_exception( __func__, mod );
++	}
++	return 0;
++}
++
+ int32_t openmpt_module_get_num_subsongs( openmpt_module * mod ) {
+ 	try {
+ 		openmpt::interface::check_soundfile( mod );
+diff --git a/libopenmpt/libopenmpt_impl.cpp b/libopenmpt/libopenmpt_impl.cpp
+index 4b826fca5..dc573e01e 100644
+--- a/libopenmpt/libopenmpt_impl.cpp
++++ b/libopenmpt/libopenmpt_impl.cpp
+@@ -51,6 +51,7 @@
+ #include "soundlib/Sndfile.h"
+ #include "soundlib/mod_specifications.h"
+ #include "soundlib/AudioReadTarget.h"
++#include "soundlib/OPL.h"  // Local addition (Exilum Player) - see get_opl_scope
+ 
+ #if MPT_OS_WINDOWS && MPT_OS_WINDOWS_WINRT
+ #include <windows.h>
+@@ -1408,6 +1409,128 @@ float module_impl::get_current_channel_vu_rear_right( std::int32_t channel ) con
+ 	return m_sndFile->m_PlayState.Chn[channel].dwFlags[OpenMPT::CHN_SURROUND] ? m_sndFile->m_PlayState.Chn[channel].nRightVU * (1.0f/128.0f) : 0.0f;
+ }
+ 
++bool module_impl::get_current_channel_state( std::int32_t channel, current_channel_state & state ) const {
++	if ( channel < 0 || channel >= m_sndFile->GetNumChannels() ) {
++		return false;
++	}
++	const OpenMPT::ModChannel & chn = m_sndFile->m_PlayState.Chn[channel];
++	state.volume = std::clamp( chn.nVolume / 4, 0, 64 );
++	state.final_volume = std::clamp( static_cast<std::int32_t>( std::round( get_current_channel_vu_mono( channel ) * 64.0f ) ), 0, 64 );
++	state.pan = std::clamp( chn.nPan, 0, 256 );
++	state.instrument = chn.nNewIns > 0 ? static_cast<std::int32_t>( chn.nNewIns ) - 1 : -1;
++	state.key = OpenMPT::ModCommand::IsNote( chn.nNote ) ? static_cast<std::int32_t>( chn.nNote ) - 1 : -1;
++	state.period = chn.nPeriod;
++	state.position = static_cast<std::int32_t>( chn.position.GetUInt() );
++	state.increment = chn.increment.GetRaw();
++	state.pitchbend = chn.GetMIDIPitchBend();
++	state.note = chn.nNote;
++	state.sample = 0;
++	if ( chn.pModSample != nullptr ) {
++		for ( OpenMPT::SAMPLEINDEX i = 1; i <= m_sndFile->GetNumSamples(); ++i ) {
++			if ( chn.pModSample == &m_sndFile->GetSample( i ) ) {
++				state.sample = i;
++				if ( state.instrument < 0 ) {
++					state.instrument = static_cast<std::int32_t>( i ) - 1;
++				}
++				break;
++			}
++		}
++	}
++	state.muted = chn.dwFlags[OpenMPT::CHN_MUTE] ? 1 : 0;
++	state.real_volume = std::clamp( chn.nRealVolume, static_cast<OpenMPT::int32>( 0 ), static_cast<OpenMPT::int32>( 16384 ) );
++	state.output_level = static_cast<std::int32_t>( std::lround( std::clamp( chn.exilumOutputLevel, 0.0f, 2.0f ) * 16384.0f ) );
++	state.opl_voice = -1;
++	// Only while what the channel plays is an OPL patch. A voice stays the channel's after its
++	// note is let go, until it is cut or another channel takes it - and a channel that has
++	// gone on to a sample would be drawn as that idle voice, a flat line over a sample playing.
++	if ( m_sndFile->m_opl && chn.dwFlags[OpenMPT::CHN_ADLIB] ) {
++		const OpenMPT::uint8 voice = m_sndFile->m_opl->ScopeVoice( static_cast<OpenMPT::CHANNELINDEX>( channel ) );
++		if ( voice < OpenMPT::OPL::kVoices ) {
++			state.opl_voice = voice;
++		}
++	}
++	return true;
++}
++
++std::uint64_t module_impl::get_opl_frames() const {
++	return m_sndFile->m_opl ? m_sndFile->m_opl->ScopeFrames() : 0;
++}
++
++bool module_impl::get_opl_scope( std::int32_t voice, std::uint64_t start_frame, double frames_per_column, std::int32_t columns, std::int8_t * out ) const {
++	if ( !m_sndFile->m_opl || voice < 0 || voice >= OpenMPT::OPL::kVoices ) {
++		return false;
++	}
++	return m_sndFile->m_opl->ReadScope( static_cast<OpenMPT::uint8>( voice ), start_frame, frames_per_column, columns, out );
++}
++
++bool module_impl::get_sample_state( std::int32_t sample, sample_state & state ) const {
++	if ( sample <= 0 || sample > m_sndFile->GetNumSamples() ) {
++		return false;
++	}
++	const OpenMPT::ModSample & smp = m_sndFile->GetSample( static_cast<OpenMPT::SAMPLEINDEX>( sample ) );
++	if ( !smp.HasSampleData() || smp.uFlags[OpenMPT::CHN_ADLIB] ) {
++		return false;
++	}
++	state.data = smp.samplev();
++	state.length = static_cast<std::int32_t>( smp.nLength );
++	state.loop_start = static_cast<std::int32_t>( smp.nLoopStart );
++	state.loop_end = static_cast<std::int32_t>( smp.nLoopEnd );
++	state.flags = static_cast<std::int32_t>( static_cast<std::uint16_t>( smp.uFlags ) );
++	state.c5speed = static_cast<std::int32_t>( smp.nC5Speed );
++	state.channels = static_cast<std::int32_t>( smp.GetNumChannels() );
++	state.bits_per_sample = static_cast<std::int32_t>( smp.GetElementarySampleSize() * 8 );
++	return true;
++}
++
++std::int32_t module_impl::set_channel_mute( std::int32_t channel, std::int32_t status ) {
++	if ( channel < 0 || channel >= m_sndFile->GetNumChannels() ) {
++		return -1;
++	}
++	OpenMPT::ModChannel & chn = m_sndFile->m_PlayState.Chn[channel];
++	// A channel the file itself mutes comes up with CHN_SYNCMUTE on the playing channel, not
++	// CHN_MUTE: it is run in silence, so that it is in step when it is brought back.
++	const bool muted = chn.dwFlags[OpenMPT::CHN_MUTE | OpenMPT::CHN_SYNCMUTE] || m_sndFile->ChnSettings[channel].dwFlags[OpenMPT::CHN_MUTE];
++	if ( status < 0 ) {
++		return muted ? 1 : 0;
++	}
++	const bool setMuted = status != 0;
++	// Whose mute it is: 1 is the listener's, 2 the file's own, put back as the file has it. They
++	// are the same silence, and differ in what a Scream Tracker module does with a channel it
++	// has switched off - see ModChannelSettings::userMuted.
++	const bool asFile = status == 2;
++	// As it is already: nothing to do, and a channel the file mutes stays the file's to have
++	// muted rather than becoming the listener's.
++	if ( setMuted == muted ) {
++		if ( asFile ) {
++			m_sndFile->ChnSettings[channel].userMuted = false;
++		}
++		return muted ? 1 : 0;
++	}
++	// Both flags, on the channel's settings, the playing channel and its background voices, as
++	// the library's own set_channel_mute_status does. Clearing CHN_MUTE alone, which this did,
++	// left a channel the file mutes silent for good: unmuted to look at, CHN_SYNCMUTE still on.
++	m_sndFile->ChnSettings[channel].dwFlags.set( OpenMPT::CHN_MUTE | OpenMPT::CHN_SYNCMUTE, setMuted );
++	chn.dwFlags.set( OpenMPT::CHN_MUTE | OpenMPT::CHN_SYNCMUTE, setMuted );
++	// A muted channel is not looked at again until it is unmuted, so nothing would tell the OPL
++	// chip to let go of a note the channel was holding: it went on sounding for as long as the
++	// channel stayed muted. Cut here, as the tracker does when a channel is muted; the next note
++	// after it is unmuted sets the voice up again.
++	if ( setMuted && m_sndFile->m_opl ) {
++		m_sndFile->m_opl->NoteCut( static_cast<OpenMPT::CHANNELINDEX>( channel ) );
++	}
++	for ( OpenMPT::CHANNELINDEX i = m_sndFile->GetNumChannels(); i < OpenMPT::MAX_CHANNELS; i++ ) {
++		if ( m_sndFile->m_PlayState.Chn[i].nMasterChn == channel + 1 ) {
++			m_sndFile->m_PlayState.Chn[i].dwFlags.set( OpenMPT::CHN_MUTE | OpenMPT::CHN_SYNCMUTE, setMuted );
++			if ( setMuted && m_sndFile->m_opl ) {
++				m_sndFile->m_opl->NoteCut( i );
++			}
++		}
++	}
++	// Local addition (Exilum Player) - see ModChannelSettings::userMuted.
++	m_sndFile->ChnSettings[channel].userMuted = setMuted && !asFile;
++	return muted ? 1 : 0;
++}
++
+ std::int32_t module_impl::get_num_subsongs() const {
+ 	std::unique_ptr<subsongs_type> subsongs_temp = has_subsongs_inited() ? std::unique_ptr<subsongs_type>() : std::make_unique<subsongs_type>( get_subsongs() );
+ 	const subsongs_type & subsongs = has_subsongs_inited() ? m_subsongs : *subsongs_temp;
+@@ -1732,6 +1855,9 @@ std::pair<const module_impl::ctl_info *, const module_impl::ctl_info *> module_i
+ 		{ "play.pitch_factor", ctl_type::floatingpoint },
+ 		{ "play.at_end", ctl_type::text },
+ 		{ "render.resampler.emulate_amiga", ctl_type::boolean },
++		// Local addition, read-only: whether global volume is applied to the
++		// master mix rather than to each channel's volume. See ctl_get_boolean.
++		{ "play.global_volume_applies_to_master", ctl_type::boolean },
+ 		{ "render.resampler.emulate_amiga_type", ctl_type::text },
+ 		{ "render.opl.volume_factor", ctl_type::floatingpoint },
+ 		{ "dither", ctl_type::integer }
+@@ -1831,6 +1957,13 @@ bool module_impl::ctl_get_boolean( std::string_view ctl, bool throw_if_unknown )
+ 		return m_ctl_seek_sync_samples;
+ 	} else if ( ctl == "render.resampler.emulate_amiga" ) {
+ 		return ( m_sndFile->m_Resampler.m_Settings.emulateAmiga != OpenMPT::Resampling::AmigaFilter::Off );
++	} else if ( ctl == "play.global_volume_applies_to_master" ) {
++		// Local addition. With the mix levels most files load with, the song's
++		// global volume - S3M/IT Vxx, XM Gxx - scales the finished mix, and a
++		// channel's volume and VU leave it out. Old ModPlug mix levels fold it
++		// into every channel instead. Something drawing channel levels has to
++		// know which, or it applies the global volume twice or not at all.
++		return m_sndFile->GetPlayConfig().getGlobalVolumeAppliesToMaster();
+ 	} else {
+ 		MPT_ASSERT_NOTREACHED();
+ 		return false;
+@@ -2052,6 +2185,9 @@ void module_impl::ctl_set_boolean( std::string_view ctl, bool value, bool throw_
+ 		m_ctl_load_skip_subsongs_init = value;
+ 	} else if ( ctl == "seek.sync_samples" ) {
+ 		m_ctl_seek_sync_samples = value;
++	} else if ( ctl == "play.global_volume_applies_to_master" ) {
++		// Local addition - read-only, decided by the file's mix levels.
++		throw openmpt::exception("read-only ctl: " + std::string(ctl));
+ 	} else if ( ctl == "render.resampler.emulate_amiga" ) {
+ 		OpenMPT::CResamplerSettings newsettings = m_sndFile->m_Resampler.m_Settings;
+ 		const bool enabled = value;
+diff --git a/libopenmpt/libopenmpt_impl.hpp b/libopenmpt/libopenmpt_impl.hpp
+index 7e5faac4b..4eef9f79e 100644
+--- a/libopenmpt/libopenmpt_impl.hpp
++++ b/libopenmpt/libopenmpt_impl.hpp
+@@ -239,6 +239,38 @@ public:
+ 	float get_current_channel_vu_right( std::int32_t channel ) const;
+ 	float get_current_channel_vu_rear_left( std::int32_t channel ) const;
+ 	float get_current_channel_vu_rear_right( std::int32_t channel ) const;
++	struct current_channel_state {
++		std::int32_t volume = 0;
++		std::int32_t final_volume = 0;
++		std::int32_t pan = 128;
++		std::int32_t instrument = -1;
++		std::int32_t key = -1;
++		std::int32_t period = 0;
++		std::int32_t position = 0;
++		std::int64_t increment = 0;
++		std::int32_t pitchbend = 0;
++		std::int32_t note = 0;
++		std::int32_t sample = 0;
++		std::int32_t muted = 0;
++		std::int32_t real_volume = 0;
++		std::int32_t output_level = 0;
++		std::int32_t opl_voice = -1;
++	};
++	struct sample_state {
++		const void * data = nullptr;
++		std::int32_t length = 0;
++		std::int32_t loop_start = 0;
++		std::int32_t loop_end = 0;
++		std::int32_t flags = 0;
++		std::int32_t c5speed = 0;
++		std::int32_t channels = 0;
++		std::int32_t bits_per_sample = 0;
++	};
++	bool get_current_channel_state( std::int32_t channel, current_channel_state & state ) const;
++	bool get_sample_state( std::int32_t sample, sample_state & state ) const;
++	std::int32_t set_channel_mute( std::int32_t channel, std::int32_t status );
++	std::uint64_t get_opl_frames() const;
++	bool get_opl_scope( std::int32_t voice, std::uint64_t start_frame, double frames_per_column, std::int32_t columns, std::int8_t * out ) const;
+ 	std::int32_t get_num_subsongs() const;
+ 	std::int32_t get_num_channels() const;
+ 	std::int32_t get_num_orders() const;
+diff --git a/soundlib/Fastmix.cpp b/soundlib/Fastmix.cpp
+index fe3c3abe1..f9602a5d8 100644
+--- a/soundlib/Fastmix.cpp
++++ b/soundlib/Fastmix.cpp
+@@ -465,19 +465,57 @@ bool CSoundFile::MixChannel(int count, ModChannel &chn, CHANNELINDEX channel, bo
+ 			{
+ 				// Do mixing
+ 				mixsample_t *pbufmax = pbuffer + (nSmpCount * 2);
+-				chn.nROfs = -*(pbufmax - 2);
+-				chn.nLOfs = -*(pbufmax - 1);
++
++				// Local change (Exilum Player): mixed into a buffer of its own and then
++				// added, rather than straight onto the output - the mix functions only ever
++				// add - so what this channel contributes can be measured. The result is
++				// identical; see ModChannel::exilumOutputLevel.
++				mixsample_t channelBuffer[MIXBUFFERSIZE * 2];
++				MPT_ASSERT(nSmpCount <= MIXBUFFERSIZE);
++				std::fill(channelBuffer, channelBuffer + nSmpCount * 2, mixsample_t(0));
++				const int32 gainLeft = std::max(std::abs(chn.leftVol), std::abs(chn.newLeftVol));
++				const int32 gainRight = std::max(std::abs(chn.rightVol), std::abs(chn.newRightVol));
+ 
+ #ifdef MPT_BUILD_DEBUG
+ 				SamplePosition targetpos = chn.position + chn.increment * nSmpCount;
+ #endif
+-				MixFuncTable::Functions[functionNdx | (chn.nRampLength ? MixFuncTable::ndxRamp : 0)](chn, m_Resampler, pbuffer, nSmpCount);
++				MixFuncTable::Functions[functionNdx | (chn.nRampLength ? MixFuncTable::ndxRamp : 0)](chn, m_Resampler, channelBuffer, nSmpCount);
+ #ifdef MPT_BUILD_DEBUG
+ 				MPT_ASSERT(chn.position.GetUInt() == targetpos.GetUInt());
+ #endif
+ 
+-				chn.nROfs += *(pbufmax - 2);
+-				chn.nLOfs += *(pbufmax - 1);
++				int64 peakLeft = 0, peakRight = 0;
++				for(int32 i = 0; i < nSmpCount * 2; i += 2)
++				{
++					pbuffer[i] += channelBuffer[i];
++					pbuffer[i + 1] += channelBuffer[i + 1];
++					peakLeft = std::max(peakLeft, static_cast<int64>(std::abs(static_cast<int64>(channelBuffer[i]))));
++					peakRight = std::max(peakRight, static_cast<int64>(std::abs(static_cast<int64>(channelBuffer[i + 1]))));
++				}
++				// What the mixer's own offsets were: the last frame this channel added.
++				chn.nROfs = channelBuffer[nSmpCount * 2 - 2];
++				chn.nLOfs = channelBuffer[nSmpCount * 2 - 1];
++
++				// A sample is added as its 16-bit value times the side's gain, so dividing
++				// the gain back out leaves the sample's own level - after resampling,
++				// filtering and loops - and the channel's volume puts it back in, without
++				// the pan or the master gain. The larger side, and only a side with a
++				// gain big enough to divide by without magnifying rounding.
++				constexpr int32 minGain = 16;
++				double level = 0.0;
++				if(gainLeft >= minGain)
++					level = std::max(level, static_cast<double>(peakLeft) / (32768.0 * gainLeft));
++				if(gainRight >= minGain)
++					level = std::max(level, static_cast<double>(peakRight) / (32768.0 * gainRight));
++				level *= static_cast<double>(chn.nRealVolume) / 16384.0;
++				// Background voices count towards the pattern channel they came from.
++				const CHANNELINDEX owner = channel < GetNumChannels() ? channel : (chn.nMasterChn > 0 ? static_cast<CHANNELINDEX>(chn.nMasterChn - 1) : CHANNELINDEX_INVALID);
++				if(owner < GetNumChannels())
++				{
++					float &held = m_PlayState.Chn[owner].exilumOutputLevel;
++					held = std::max(held, static_cast<float>(level));
++				}
++
+ 				pbuffer = pbufmax;
+ 				addToMix = true;
+ 			}
+diff --git a/soundlib/ModChannel.h b/soundlib/ModChannel.h
+index 94a4658cd..d1da26dba 100644
+--- a/soundlib/ModChannel.h
++++ b/soundlib/ModChannel.h
+@@ -146,6 +146,13 @@ struct ModChannel
+ 	uint8 nTremorCount, nTremorParam;
+ 	uint8 nPatternLoopCount;
+ 	uint8 nLeftVU, nRightVU;
++	// Local addition (Exilum Player): how loud this pattern channel really came
++	// out since the last CSoundFile::Read began - the loudest of its voices, its
++	// background (NNA) voices included, measured on what the mixer added to the
++	// output. On the scale of the sample data at the channel's mixing volume:
++	// a full-scale sample at nRealVolume 16384 reads 1, whatever the pan,
++	// master gain or number of channels. See CSoundFile::MixChannel.
++	float exilumOutputLevel = 0.0f;
+ 	uint8 nActiveMacro;
+ 	uint8 volSlideDownStart;
+ 	FilterMode nFilterMode;
+@@ -259,6 +266,12 @@ struct ModChannelSettings
+ 	uint16 nPan = 128;              // Initial pan (0...256)
+ 	uint8 nVolume = 64;             // Initial channel volume (0...64)
+ 	PLUGINDEX nMixPlugin = 0;       // Assigned plugin
++	// Local addition (Exilum Player): muted by the listener through
++	// libopenmpt's set_channel_mute, rather than disabled in the file. Scream
++	// Tracker skips every effect on a disabled channel (kST3NoMutedChannels),
++	// and that must not happen to a channel someone only wanted not to hear -
++	// its speed, tempo, jumps and breaks still belong to the song.
++	bool userMuted = false;
+ 
+ 	mpt::charbuf<MAX_CHANNELNAME> szName;  // Channel name
+ };
+diff --git a/soundlib/OPL.cpp b/soundlib/OPL.cpp
+index afc305a65..8d287c966 100644
+--- a/soundlib/OPL.cpp
++++ b/soundlib/OPL.cpp
+@@ -49,6 +49,10 @@ void OPL::Initialize(uint32 sampleRate)
+ 		m_opl = std::make_unique<Opal>(sampleRate);
+ 	else
+ 		m_opl->SetSampleRate(sampleRate);
++	// Local addition (Exilum Player): here, where the module is loaded, and not on the thread that mixes.
++	static_assert(kVoices == OPL_CHANNELS);
++	if(m_scope.empty())
++		m_scope.assign(static_cast<size_t>(kScopeFrames) * kVoices, 0);
+ 	Reset();
+ }
+ 
+@@ -67,10 +71,70 @@ void OPL::Mix(int32 *target, size_t count, uint32 volumeFactorQ16)
+ 		target[0] += l * factor;
+ 		target[1] += r * factor;
+ 		target += 2;
++
++		// Local addition (Exilum Player): each voice's own output, as the chip last made it, kept
++		// frame by frame for its trace, and its loudest for its level. The chip runs at its own
++		// rate and the mix above is interpolated from it; a trace has no need of that.
++		int16 *frame = m_scope.data() + static_cast<size_t>(m_scopeFrames & (kScopeFrames - 1)) * kVoices;
++		for(uint8 oplCh = 0; oplCh < kVoices; oplCh++)
++		{
++			const int16 out = m_opl->ChannelOutput(oplCh);
++			frame[oplCh] = out;
++			const int16 magnitude = static_cast<int16>(out < 0 ? -(out + 1) : out);
++			if(magnitude > m_voicePeak[oplCh])
++				m_voicePeak[oplCh] = magnitude;
++		}
++		m_scopeFrames++;
+ 	}
+ }
+ 
+ 
++// Local additions (Exilum Player) - see OPL.h.
++
++float OPL::TakeVoicePeak(uint8 oplCh)
++{
++	if(oplCh >= kVoices)
++		return 0.0f;
++	// An operator's output is 13 bits, and a carrier is one operator.
++	constexpr float carrierFullScale = 4084.0f;
++	const float peak = m_voicePeak[oplCh] / carrierFullScale;
++	m_voicePeak[oplCh] = 0;
++	return peak;
++}
++
++
++bool OPL::ReadScope(uint8 oplCh, uint64 startFrame, double framesPerColumn, int32 columns, int8 *out) const
++{
++	if(oplCh >= kVoices || m_scope.empty() || out == nullptr || columns <= 0 || !(framesPerColumn > 0.0))
++		return false;
++	const double spanFrames = framesPerColumn * columns;
++	if(!(spanFrames < kScopeFrames / 2))
++		return false;
++	const uint64 span = static_cast<uint64>(spanFrames) + 1;
++	const uint64 head = m_scopeFrames;
++	uint64 start = startFrame;
++	if(start > head || head - start < span)
++		start = head > span ? head - span : 0;
++	// Gone round since: what is there now is a later stretch.
++	if(head - start > kScopeFrames)
++		return false;
++
++	const auto at = [&](int32 column) -> int32
++	{
++		const uint64 frame = start + static_cast<uint64>(column * framesPerColumn);
++		return frame < head ? m_scope[static_cast<size_t>(frame & (kScopeFrames - 1)) * kVoices + oplCh] : 0;
++	};
++	// Fitted to the range, but a voice dying away is not blown up into one at full strength.
++	constexpr int32 quietest = 128;
++	int32 peak = quietest;
++	for(int32 column = 0; column < columns; column++)
++		peak = std::max(peak, std::abs(at(column)));
++	for(int32 column = 0; column < columns; column++)
++		out[column] = static_cast<int8>(std::clamp(at(column) * 127 / peak, -127, 127));
++	return true;
++}
++
++
+ OPL::Register OPL::ChannelToRegister(uint8 oplCh)
+ {
+ 	if(oplCh < 9)
+@@ -309,6 +373,10 @@ void OPL::Reset()
+ 		m_isActive = false;
+ 	}
+ 
++	// Local addition (Exilum Player): a seek starts the chip again, and what its voices were is not what they are.
++	std::fill(m_scope.begin(), m_scope.end(), int16(0));
++	m_voicePeak.fill(0);
++
+ 	m_KeyOnBlock.fill(0);
+ 	m_OPLtoChan.fill(CHANNELINDEX_INVALID);
+ 	m_ChanToOPL.fill(OPL_CHANNEL_INVALID);
+diff --git a/soundlib/OPL.h b/soundlib/OPL.h
+index 214a00602..fe67b8aea 100644
+--- a/soundlib/OPL.h
++++ b/soundlib/OPL.h
+@@ -97,6 +97,25 @@ public:
+ 	void MoveChannel(CHANNELINDEX from, CHANNELINDEX to);
+ 	void Reset();
+ 
++	// Local additions (Exilum Player): each voice's own output, for a player that draws its channels.
++	// The chip mixes its voices itself, so nothing of one reaches the mixer where a sample's level is
++	// measured, and it has no sample data to draw a trace from. See OPL::Mix.
++	static constexpr uint8 kVoices = 18;
++	// Frames of every voice kept: over a second at 48 kHz, which is further back than a device plays.
++	static constexpr uint32 kScopeFrames = 65536;
++	// Frames mixed since the chip was made, which is where the newest frame kept is.
++	uint64 ScopeFrames() const { return m_scopeFrames; }
++	// The voice a channel plays on, or kVoices when it has none or its note has been cut.
++	uint8 ScopeVoice(CHANNELINDEX c) const { const uint8 oplCh = (c < m_ChanToOPL.size()) ? GetVoice(c) : OPL_CHANNEL_INVALID; return oplCh < kVoices ? oplCh : kVoices; }
++	// The channel a voice plays for, or CHANNELINDEX_INVALID.
++	CHANNELINDEX VoiceChannel(uint8 oplCh) const { return oplCh < kVoices ? m_OPLtoChan[oplCh] : CHANNELINDEX_INVALID; }
++	// How loud a voice has been since this was last asked, 1 being a carrier at its loudest; asking starts it again.
++	float TakeVoicePeak(uint8 oplCh);
++	// A voice's output as a trace of [columns] bytes, [framesPerColumn] frames apart, from [startFrame]
++	// (as ScopeFrames counts) where that much has been mixed since, and the last that has where not.
++	// Fitted to the byte range unless it is close to silence. False when the frames are no longer kept.
++	bool ReadScope(uint8 oplCh, uint64 startFrame, double framesPerColumn, int32 columns, int8 *out) const;
++
+ 	// A list of all registers for channels and operators if oplCh == 0xFF, otherwise all registers for the given channel and its operators
+ 	static std::vector<Register> AllVoiceRegisters(uint8 oplCh = 0xFF);
+ 	// Returns voice for given register, or 0xFF if it's not a voice-specific register
+@@ -130,6 +149,11 @@ protected:
+ 	std::array<OPLPatch, OPL_CHANNELS> m_Patches;
+ 
+ 	bool m_isActive = false;
++
++	// Local additions (Exilum Player) - see ScopeFrames.
++	std::vector<int16> m_scope;  // kScopeFrames frames of kVoices values each, a ring
++	uint64 m_scopeFrames = 0;
++	std::array<int16, OPL_CHANNELS> m_voicePeak = {};
+ };
+ 
+ OPENMPT_NAMESPACE_END
+diff --git a/soundlib/Snd_fx.cpp b/soundlib/Snd_fx.cpp
+index 5ba9ee3a5..046ee5772 100644
+--- a/soundlib/Snd_fx.cpp
++++ b/soundlib/Snd_fx.cpp
+@@ -574,7 +574,7 @@ std::vector<GetLengthType> CSoundFile::GetLength(enmGetLengthResetMode adjustMod
+ 		{
+ 			ModChannel &chn = playState.Chn[nChn];
+ 			chn.isFirstTick = true;
+-			if(p->IsEmpty() || (ignoreMutedChn && ChnSettings[nChn].dwFlags[CHN_MUTE]))  // not even effects are processed on muted S3M channels
++			if(p->IsEmpty() || (ignoreMutedChn && ChnSettings[nChn].dwFlags[CHN_MUTE] && !ChnSettings[nChn].userMuted))  // not even effects are processed on muted S3M channels (local change: not on channels the listener muted)
+ 			{
+ 				chn.rowCommand.Clear();
+ 				continue;
+@@ -3209,7 +3209,7 @@ bool CSoundFile::ProcessEffects()
+ 			if (m_nInstruments) ProcessMidiOut(nChn);
+ 		}
+ 
+-		if(m_playBehaviour[kST3NoMutedChannels] && ChnSettings[nChn].dwFlags[CHN_MUTE])	// not even effects are processed on muted S3M channels
++		if(m_playBehaviour[kST3NoMutedChannels] && ChnSettings[nChn].dwFlags[CHN_MUTE] && !ChnSettings[nChn].userMuted)	// not even effects are processed on muted S3M channels (local change: not on channels the listener muted)
+ 			continue;
+ 
+ 		if(!m_PlayState.m_nTickCount)
+@@ -6305,8 +6305,9 @@ void CSoundFile::SetTempo(PlayState &playState, TEMPO param, bool setFromUI) con
+ 
+ void CSoundFile::PatternLoop(PlayState &state, CHANNELINDEX nChn, ModCommand::PARAM param) const
+ {
+-	if(m_playBehaviour[kST3NoMutedChannels] && state.Chn[nChn].dwFlags[CHN_MUTE | CHN_SYNCMUTE])
+-		return;  // not even effects are processed on muted S3M channels
++	if(m_playBehaviour[kST3NoMutedChannels] && state.Chn[nChn].dwFlags[CHN_MUTE | CHN_SYNCMUTE]
++	   && !(nChn < ChnSettings.size() && ChnSettings[nChn].userMuted))
++		return;  // not even effects are processed on muted S3M channels (local change: not on channels the listener muted)
+ 
+ 	// ST3 doesn't have per-channel pattern loop memory.
+ 	ModChannel &chn = state.Chn[(GetType() == MOD_TYPE_S3M) ? 0 : nChn];
+diff --git a/soundlib/Sndmix.cpp b/soundlib/Sndmix.cpp
+index 34057659e..872975fe6 100644
+--- a/soundlib/Sndmix.cpp
++++ b/soundlib/Sndmix.cpp
+@@ -224,6 +224,10 @@ samplecount_t CSoundFile::Read(samplecount_t count, IAudioTarget &target, IAudio
+ 	samplecount_t countRendered = 0;
+ 	samplecount_t countToRender = count;
+ 
++	// Local addition (Exilum Player): each Read measures its own audio - see ModChannel::exilumOutputLevel.
++	for(auto &chn : m_PlayState.Chn)
++		chn.exilumOutputLevel = 0.0f;
++
+ 	while(!m_PlayState.m_flags[SONG_ENDREACHED] && countToRender > 0)
+ 	{
+ 		// Update Channel Data
+@@ -307,6 +311,25 @@ samplecount_t CSoundFile::Read(samplecount_t count, IAudioTarget &target, IAudio
+ 		if(m_opl)
+ 		{
+ 			m_opl->Mix(MixSoundBuffer, countChunk, m_OPLVolumeFactor * m_nVSTiVolume / 48);
++
++			// Local addition (Exilum Player): the chip mixes its own voices, so none of them goes
++			// through MixChannel, where a channel's level is measured - see
++			// ModChannel::exilumOutputLevel. Each voice's is taken from the chip instead, for the
++			// pattern channel it plays for, a background voice counting towards the one it came from.
++			for(uint8 oplCh = 0; oplCh < OPL::kVoices; oplCh++)
++			{
++				const float level = m_opl->TakeVoicePeak(oplCh);
++				CHANNELINDEX owner = m_opl->VoiceChannel(oplCh);
++				if(owner >= m_PlayState.Chn.size())
++					continue;
++				if(owner >= GetNumChannels())
++					owner = m_PlayState.Chn[owner].nMasterChn > 0 ? static_cast<CHANNELINDEX>(m_PlayState.Chn[owner].nMasterChn - 1) : CHANNELINDEX_INVALID;
++				if(owner < GetNumChannels())
++				{
++					float &held = m_PlayState.Chn[owner].exilumOutputLevel;
++					held = std::max(held, level);
++				}
++			}
+ 		}
+ 
+ #ifndef NO_REVERB
+diff --git a/soundlib/opal.h b/soundlib/opal.h
+index b10ad285d..f4327c153 100644
+--- a/soundlib/opal.h
++++ b/soundlib/opal.h
+@@ -178,6 +178,8 @@ class Opal {
+         void                SetSampleRate(int sample_rate);
+         void                Port(uint16_t reg_num, uint8_t val);
+         void                Sample(int16_t *left, int16_t *right);
++        // Local addition (Exilum Player): what a channel last put out, at the chip's own rate - see Output.
++        int16_t             ChannelOutput(int chan) const {  return ChanOut[chan];  }
+ 
+     protected:
+         void                Init(int sample_rate);
+@@ -186,6 +188,7 @@ class Opal {
+         int32_t             SampleRate;
+         int32_t             SampleAccum;
+         int16_t             LastOutput[2], CurrOutput[2];
++        int16_t             ChanOut[NumChannels] = {};      // Local addition (Exilum Player) - see ChannelOutput
+         Channel             Chan[NumChannels];
+         Operator            Op[NumOperators];
+ //      uint16_t            ExpTable[256];
+@@ -597,6 +600,10 @@ void Opal::Output(int16_t &left, int16_t &right) {
+         int16_t chanleft, chanright;
+         Chan[i].Output(chanleft, chanright);
+ 
++        // Local addition (Exilum Player): kept for whoever draws the channel. Its two sides are the
++        // same sound, or one of them is silent.
++        ChanOut[i] = chanleft != 0 ? chanleft : chanright;
++
+         leftmix += chanleft;
+         rightmix += chanright;
+     }

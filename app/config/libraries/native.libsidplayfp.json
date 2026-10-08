@@ -1,0 +1,21 @@
+{
+  "uniqueId": "native.libsidplayfp",
+  "name": "libsidplayfp",
+  "description": "Plays Commodore 64 SID tunes.",
+  "artifactVersion": "3.1.1",
+  "website": "https://github.com/libsidplayfp/libsidplayfp",
+  "licenses": [
+    "gpl-2.0-or-later"
+  ],
+  "developers": [
+    {
+      "name": "Leandro Nini"
+    },
+    {
+      "name": "Antti Lankila"
+    },
+    {
+      "name": "Simon White"
+    }
+  ]
+}

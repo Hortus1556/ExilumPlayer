@@ -1,0 +1,6 @@
+{
+  "hash": "libvgm-mixed",
+  "name": "Per-core licences; see notes",
+  "url": "https://github.com/ValleyBell/libvgm",
+  "content": "libvgm - licence\n\nThe libvgm repository states no licence of its own: there is no LICENSE or\nCOPYING file in it. Exilum Player carries it pending the author's permission;\nsee renderer/src/main/cpp/libvgm/ANDROID-NOTES.md in the source.\n\nThe sound cores inside libvgm carry their own licences, in their headers:\n\n- BSD-3-Clause: most of the cores taken from MAME, and ymfm by Aaron Giles.\n- LGPL-2.1-or-later: the Nuked OPM and OPL3 cores.\n- GPL-2.0-or-later: fmopn.c, fmopl.c, ym2151.c, ym2413.c, ymf262.c,\n  nes_apu.c, msm5232.c and nukedopll.c.\n- MIT: two further cores.\n\nymf278b.c (the OPL4) is GPL-2.0 only, which a GPL-3.0 program cannot include,\nand is left out of the build.\n"
+}

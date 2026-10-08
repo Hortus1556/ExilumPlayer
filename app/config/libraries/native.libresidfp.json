@@ -1,0 +1,21 @@
+{
+  "uniqueId": "native.libresidfp",
+  "name": "libresidfp",
+  "description": "The SID chip emulation libsidplayfp plays through.",
+  "artifactVersion": "1.2.2",
+  "website": "https://github.com/libsidplayfp/libresidfp",
+  "licenses": [
+    "gpl-2.0-or-later"
+  ],
+  "developers": [
+    {
+      "name": "Leandro Nini"
+    },
+    {
+      "name": "Antti Lankila"
+    },
+    {
+      "name": "Dag Lem"
+    }
+  ]
+}

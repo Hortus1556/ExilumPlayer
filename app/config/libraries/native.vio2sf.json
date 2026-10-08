@@ -1,0 +1,33 @@
+{
+  "uniqueId": "native.vio2sf",
+  "name": "vio2sf",
+  "description": "Plays Nintendo DS music (2SF): the DeSmuME emulator, cut down to the console's sound.",
+  "artifactVersion": "1d68801",
+  "website": "https://gitlab.com/kode54/vio2sf",
+  "licenses": [
+    "gpl-2.0-or-later"
+  ],
+  "developers": [
+    {
+      "name": "yopyop"
+    },
+    {
+      "name": "shash"
+    },
+    {
+      "name": "Theo Berkau"
+    },
+    {
+      "name": "thoduv"
+    },
+    {
+      "name": "Guillaume Duhamel"
+    },
+    {
+      "name": "The DeSmuME team"
+    },
+    {
+      "name": "Christopher Snowhill"
+    }
+  ]
+}

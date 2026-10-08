@@ -1,0 +1,15 @@
+{
+  "uniqueId": "native.adplug",
+  "name": "AdPlug",
+  "description": "Plays AdLib (OPL2/OPL3) music from DOS games and trackers.",
+  "artifactVersion": "2.3.3",
+  "website": "https://github.com/adplug/adplug",
+  "licenses": [
+    "lgpl-2.1-or-later"
+  ],
+  "developers": [
+    {
+      "name": "Simon Peter et al."
+    }
+  ]
+}

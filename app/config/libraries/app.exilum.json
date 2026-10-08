@@ -1,0 +1,13 @@
+{
+  "uniqueId": "app.exilum",
+  "name": "Exilum Player",
+  "description": "A player for tracker modules and chip music.",
+  "licenses": [
+    "gpl-3.0-or-later"
+  ],
+  "developers": [
+    {
+      "name": "Hortus1556"
+    }
+  ]
+}

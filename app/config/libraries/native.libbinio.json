@@ -1,0 +1,15 @@
+{
+  "uniqueId": "native.libbinio",
+  "name": "libbinio",
+  "description": "The binary I/O library AdPlug reads files through.",
+  "artifactVersion": "1.5",
+  "website": "https://github.com/adplug/libbinio",
+  "licenses": [
+    "lgpl-2.1-or-later"
+  ],
+  "developers": [
+    {
+      "name": "Simon Peter"
+    }
+  ]
+}

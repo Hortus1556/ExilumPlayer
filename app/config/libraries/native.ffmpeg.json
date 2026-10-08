@@ -1,0 +1,15 @@
+{
+  "uniqueId": "native.ffmpeg",
+  "name": "FFmpeg",
+  "description": "Plays recorded music: MP3, FLAC, AAC, ALAC, Ogg Vorbis, Opus, Musepack, WavPack, WAV, AIFF. An audio-only build: libavformat, libavcodec, libavutil and libswresample.",
+  "artifactVersion": "9.0.2",
+  "website": "https://ffmpeg.org",
+  "licenses": [
+    "lgpl-2.1-or-later"
+  ],
+  "developers": [
+    {
+      "name": "The FFmpeg developers"
+    }
+  ]
+}

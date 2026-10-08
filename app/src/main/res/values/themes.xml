@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.ExilumPlayer" parent="android:Theme.Material.NoActionBar" />
+
+    <!-- All this work just to color the "animated" playing icon on AA's head unit-->
+    <style name="CarTheme" parent="android:Theme.Material.NoActionBar">
+        <item name="android:colorAccent">@color/aa_media_theme</item>
+    </style>
+
+</resources>

@@ -1,0 +1,19 @@
+{
+  "uniqueId": "native.custommade",
+  "name": "CustomMade replayer",
+  "description": "Ron Klaren's Amiga game music, ported from the Eagleplayer.",
+  "licenses": [
+    "custommade-unstated"
+  ],
+  "developers": [
+    {
+      "name": "Ivo Zoer"
+    },
+    {
+      "name": "Andy Silva"
+    },
+    {
+      "name": "Wanted Team"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "uniqueId": "code.drakmod",
+  "name": "Drakmod Player",
+  "description": "The Android player Exilum Player started from.",
+  "licenses": [
+    "drakmod-mit"
+  ],
+  "developers": [
+    {
+      "name": "Lossy Dragon"
+    }
+  ]
+}

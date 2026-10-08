@@ -1,0 +1,18 @@
+{
+  "uniqueId": "native.gme",
+  "name": "Game_Music_Emu",
+  "description": "Plays NES, SNES and Game Boy music.",
+  "artifactVersion": "0.6.6",
+  "website": "https://github.com/libgme/game-music-emu",
+  "licenses": [
+    "lgpl-2.1-or-later"
+  ],
+  "developers": [
+    {
+      "name": "Shay Green"
+    },
+    {
+      "name": "libgme contributors"
+    }
+  ]
+}

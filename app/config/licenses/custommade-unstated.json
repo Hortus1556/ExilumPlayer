@@ -1,0 +1,5 @@
+{
+  "hash": "custommade-unstated",
+  "name": "No licence stated by the original authors",
+  "content": "CustomMade replayer - provenance\n\nExilum Player's CustomMade decoder (renderer/src/main/cpp/custommade) is a C++\nport of the routine that plays Ron Klaren's music: Ivo Zoer's replay routine\n(1989-90), as adapted for Eagleplayer by Andy Silva and Wanted Team\n(CustomMade_v1.asm).\n\nNeither the original routine nor the Eagleplayer adaptation states a licence.\nThe port is distributed as part of Exilum Player under the GNU GPL v3 or later,\nwithout any claim over the original authors' work.\n"
+}

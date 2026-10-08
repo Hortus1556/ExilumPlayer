@@ -1,0 +1,41 @@
+{
+  "uniqueId": "native.vgmstream",
+  "name": "vgmstream",
+  "description": "The GameCube streams' formats and codecs - DSP ADPCM with its many headers, HPS, ADX, AST, AFC, DTK and more - are ported from vgmstream's, into the app's own GameCube stream decoder.",
+  "website": "https://github.com/vgmstream/vgmstream",
+  "licenses": [
+    "vgmstream-isc"
+  ],
+  "developers": [
+    {
+      "name": "Adam Gashlin"
+    },
+    {
+      "name": "Fastelbja"
+    },
+    {
+      "name": "Ronny Elfert"
+    },
+    {
+      "name": "bnnm"
+    },
+    {
+      "name": "Christopher Snowhill"
+    },
+    {
+      "name": "NicknineTheEagle"
+    },
+    {
+      "name": "bxaimc"
+    },
+    {
+      "name": "Thealexbarney"
+    },
+    {
+      "name": "CyberBotX"
+    },
+    {
+      "name": "EdnessP"
+    }
+  ]
+}

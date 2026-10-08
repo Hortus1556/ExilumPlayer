@@ -1,0 +1,14 @@
+{
+  "uniqueId": "native.stb_vorbis",
+  "name": "stb_vorbis",
+  "description": "Decodes Ogg Vorbis samples inside modules, for libopenmpt.",
+  "website": "https://github.com/nothings/stb",
+  "licenses": [
+    "stb-mit-or-unlicense"
+  ],
+  "developers": [
+    {
+      "name": "Sean Barrett"
+    }
+  ]
+}

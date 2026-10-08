@@ -1,0 +1,243 @@
+Exilum Player
+Copyright (C) 2026 Hortus1556
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program (the LICENSE file). If not, see <https://www.gnu.org/licenses/>.
+
+
+Third-party code
+================
+
+Exilum Player is built from the components below. Each keeps its own licence;
+GPL-3.0-or-later is the licence of the whole, which every one of them allows.
+One of them, the PlayStation's sound unit, comes under version 3 without the
+words "or any later version": while it is part of the build, the build as a
+whole is under version 3.
+The app lists them all, with their licence texts, under Settings > About.
+
+
+Drakmod Player
+--------------
+Exilum Player started as a fork of Drakmod Player, and parts of its Android
+code still come from it. Those parts are used under the MIT License:
+
+MIT License
+
+Copyright (c) 2026 Lossy Dragon
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+
+Native audio engines (renderer/src/main/cpp)
+--------------------------------------------
+
+libopenmpt 0.9.0-pre.13 (revision f83cedb) - tracker modules
+    Copyright (c) 2004-2026, OpenMPT Project Developers and Contributors
+    Copyright (c) 1997-2003, Olivier Lapicque
+    BSD-3-Clause, full text in renderer/src/main/cpp/openmpt/LICENSE.
+    Local changes: renderer/src/main/cpp/patches/openmpt-waveform-api.patch.
+    Built with two decoders libopenmpt ships:
+      minimp3 - lieff - CC0-1.0
+      stb_vorbis - Copyright (c) 2017 Sean Barrett - MIT or Unlicense
+    The output effects are adapted from it, under the same licence, in
+    renderer/src/main/cpp: the reverb (fx-reverb.cpp) from
+    soundlib/plugins/dmo/I3DL2Reverb.cpp and the rooms in sounddsp/Reverb.cpp,
+    the chorus (fx-chorus.cpp) from soundlib/plugins/dmo/Chorus.cpp, the
+    surround (fx-surround.cpp) from sounddsp/DSP.cpp, and the equalizer's
+    bands (fx-equalizer.cpp) from soundlib/plugins/dmo/ParamEq.cpp.
+
+HivelyTracker replayer - AHX and HVL
+    Copyright (c) 2006-2018, Pete Gordon
+    BSD-3-Clause, full text in renderer/src/main/cpp/hvl/LICENSE.
+    Local changes are marked in replay.c and replay.h.
+
+Furnace 0.6.8.3 - Furnace and DefleMask modules
+    Copyright (C) 2021-2025 tildearrow and contributors
+    GPL-2.0-or-later. Furnace carries third-party sound cores under their own
+    licences, all compatible with the GPL; see its source tree.
+    Local changes: renderer/src/main/cpp/patches/furnace-exilum.patch.
+
+libsidplayfp 3.1.1 and libresidfp 1.2.2 - Commodore 64 SID
+    Copyright 2011-2026 Leandro Nini, 2007-2010 Antti Lankila,
+    2000-2001 Simon White, 2004 Dag Lem
+    GPL-2.0-or-later.
+    Local changes: renderer/src/main/cpp/patches/libsidplayfp-exilum.patch and
+    libresidfp-exilum.patch.
+
+CustomMade replayer - Ron Klaren's Amiga music (.cm, .rk, .rkb)
+    A C++ port, in renderer/src/main/cpp/custommade, of Ivo Zoer's replay
+    routine as adapted for Eagleplayer by Andy Silva and Wanted Team. Neither
+    states a licence.
+
+libvgm (revision c8b998b) - VGM, S98, DRO, GYM
+    Copyright Valley Bell and contributors.
+    The repository states no licence of its own, and is carried pending the
+    author's permission. Its sound cores carry their own licences
+    (BSD-3-Clause, LGPL-2.1-or-later, GPL-2.0-or-later, MIT) in their headers.
+    ymf278b.c, GPL-2.0 only, is left out of the build. See
+    renderer/src/main/cpp/libvgm/ANDROID-NOTES.md.
+
+Game_Music_Emu 0.6.6 - NSF, NSFE, SPC, GBS
+    Copyright (C) 2003-2009 Shay Green, and the libgme contributors
+    LGPL-2.1-or-later, full text in renderer/src/main/cpp/gme/license.txt.
+    Local changes: renderer/src/main/cpp/gme/ANDROID-CHANGES.md.
+
+AdPlug 2.3.3 and libbinio 1.5 - AdLib (OPL2/OPL3) music
+    Copyright (C) 1999-2025 Simon Peter, et al.
+    LGPL-2.1-or-later.
+    Local changes: renderer/src/main/cpp/adplug/ANDROID-CHANGES.md.
+
+mGBA 0.10.5 - Game Boy Advance music (.gsf, .minigsf)
+    Copyright (c) 2013-2022 Jeffrey Pfau, and the mGBA contributors.
+    MPL-2.0, full text in renderer/src/main/cpp/mgba/LICENSE. Only its core is
+    built, unchanged. It carries blip_buf 1.1.0, Copyright (C) 2003-2009 Shay
+    Green, LGPL-2.1-or-later, and inih, Copyright (c) 2009 Ben Hoyt,
+    BSD-3-Clause (see renderer/src/main/cpp/mgba/res/licenses).
+
+vio2sf - Nintendo DS music (.2sf, .mini2sf)
+    The DeSmuME emulator cut down to the console's sound, as kept by
+    Christopher Snowhill (gitlab.com/kode54/vio2sf, commit 1d68801).
+    Copyright (C) 2006 yopyop, 2006-2007 shash, 2006-2007 Theo Berkau,
+    2006 thoduv, 2005-2006 Guillaume Duhamel, 2006-2009 the DeSmuME team,
+    2013 Christopher Snowhill.
+    GPL-2.0-or-later, full text in
+    renderer/src/main/cpp/vio2sf/desmume/COPYING.
+    Local changes: renderer/src/main/cpp/vio2sf/ANDROID-CHANGES.md.
+
+lazyusf2 - Nintendo 64 music (.usf, .miniusf)
+    The Mupen64Plus emulator cut down to the console's sound, as kept by
+    Christopher Snowhill (gitlab.com/kode54/lazyusf2, commit 421f00b).
+    Copyright (C) 2002 Hacktarux, 2002 Blight, 2008-2012 Richard Goedeken,
+    2008-2012 Tillin9, DarkJeztr, Ebenblues, Nmn, Okaygo, Olejl,
+    2010 Ari64, 2011-2012 CasualJames, 2012-2014 Bobby Smiles,
+    2015 Nebuleon, 2016-2020 Gilles Siberlin, the Mupen64Plus team,
+    and Christopher Snowhill.
+    GPL-2.0-or-later, full text in
+    renderer/src/main/cpp/lazyusf2/rsp_hle/LICENSES.
+    It carries Iconoclast's RSP interpreter (rsp_lle), CC0-1.0, and the
+    CIC-NUS-6105 algorithm, Copyright 2011 X-Scale, BSD-2-Clause (full
+    text in renderer/src/main/cpp/lazyusf2/si/n64_cic_nus_6105.c).
+    Local changes: renderer/src/main/cpp/lazyusf2/ANDROID-CHANGES.md.
+
+aopsf - PlayStation music (.psf, .minipsf)
+    The PlayStation engine of the Audio Overload SDK by R. Belmont and
+    Richard Bannister, as kept by Christopher Snowhill
+    (gitlab.com/kode54/aopsf, commit 8213121).
+    Copyright (c) 2007-2008 R. Belmont and Richard Bannister,
+    2015 Christopher Snowhill.
+    BSD-3-Clause, full text at the top of
+    renderer/src/main/cpp/aopsf/psx_internal.h.
+    It carries, of Highly Experimental by Neill Corlett, the sound unit
+    (spu/) and the console's counters (the ioptimer_* functions in
+    psx_hw.c, their structures in psx_internal.h): GPL-3.0, full text in
+    LICENSE. The rest of those two files is BSD-3-Clause.
+    The MAME processor core and headers it was written around are not
+    included. The processor (r3000.c, r3000.h) is Exilum's own code,
+    GPL-3.0-or-later, written from a description of how that core, by
+    smf, behaves, to behave as it does; no text of it is here.
+    A copy in the tree, its changes marked "Exilum:".
+    Local changes: renderer/src/main/cpp/aopsf/ANDROID-CHANGES.md.
+
+FFmpeg 9.0.2 - recorded music (.mp3, .flac, .m4a, .aac, .ogg, .opus, .mpc,
+.wv, .wav, .aiff)
+    Copyright (c) 2000-2026 the FFmpeg developers (see
+    renderer/src/main/cpp/ffmpeg/CREDITS and the headers of its files).
+    LGPL-2.1-or-later, full text in
+    renderer/src/main/cpp/ffmpeg/COPYING.LGPLv2.1. An audio-only build of
+    libavformat, libavcodec, libavutil and libswresample, with none of its
+    GPL or nonfree parts enabled: the demuxers, parsers and decoders for the
+    formats above and nothing else, a fifteenth of the release, unchanged.
+    How it is configured and copied in: tools/ffmpeg.
+
+vgmstream - GameCube streams (.dsp, .adx, .hps, .ast, .afc, .adp and more)
+    The GameCube formats and codecs in renderer/src/main/cpp/gc-formats.cpp
+    and gc-codecs.cpp are ported from vgmstream (github.com/vgmstream/vgmstream).
+    Copyright (c) 2008-2025 Adam Gashlin, Fastelbja, Ronny Elfert, bnnm,
+    Christopher Snowhill, NicknineTheEagle, bxaimc, Thealexbarney, CyberBotX,
+    EdnessP, et al. ISC License:
+
+    Permission to use, copy, modify, and distribute this software for any
+    purpose with or without fee is hereby granted, provided that the above
+    copyright notice and this permission notice appear in all copies.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+Signalsmith Stretch 1.3.2 and Signalsmith Linear 0.3.1 - pitch and tempo
+for the emulated consoles
+    Copyright (c) 2022 Geraint Luff / Signalsmith Audio Ltd., and
+    Copyright (c) 2025 Signalsmith Audio.
+    MIT License, full texts in renderer/src/main/cpp/signalsmith-stretch and
+    renderer/src/main/cpp/signalsmith-linear (LICENSE.txt).
+
+
+Android libraries
+-----------------
+Oboe, AndroidX, Jetpack Compose, Media3, Koin, Ktor, Kyant's backdrop and the
+other libraries the app links are listed, with their licences, under
+Settings > About, from the build's dependency metadata. They are under the
+Apache License 2.0, the MIT License or the BSD 3-Clause License.
+
+
+Logos
+-----
+A row leads with the logo of the machine, the program or the format its file
+is from (app/src/main/res/drawable/logo_*.xml). The logos are trademarks of
+their owners, used here only to say what a file is; nothing about them is
+licensed under the GPL, and their use implies no endorsement. Each was taken
+from Wikimedia Commons (https://commons.wikimedia.org/wiki/File:<name>), cut
+to what it draws and resized; five were also redrawn with their black in
+white for dark themes (logo_*_dark.xml). As Commons has them:
+
+Public domain (too simple to be copyrightable; trademarked):
+    Commodore 64 logo-5.svg, NES logo.svg, Super Famicom logo.svg,
+    Gameboy logo.svg, Gameboy advance logo.svg, Nintendo DS Logo.svg,
+    Nintendo 64 wordmark.svg, Playstation logo colour.svg,
+    MegaDriveJPLogo.svg, SEGA logo.svg, PC engine logo red.svg,
+    MSX-Logo.svg, Atari logo.svg, Sinclair ZX Spectrum-01.svg,
+    PC9800 logo 1982.svg, Commodore Amiga US Logo.svg, Ad Lib logo.svg,
+    FLAC logo vector.svg, Mp3.svg, Ogg Logo.svg, Opus logo2.svg,
+    Apple Lossless logo.svg, WavPack logo.svg.
+
+CC0 1.0:
+    Nintendo GameCube symbol logo.svg.
+
+Creative Commons Attribution-ShareAlike 4.0
+(https://creativecommons.org/licenses/by-sa/4.0/):
+    AAC Logo.svg - see its page on Commons for its author.
+
+Furnace's logo (app/src/main/res/drawable-nodpi/logo_furnace.png) is
+Furnace's own application icon, scaled down, from
+renderer/src/main/cpp/furnace/res: Copyright (C) 2021-2025 tildearrow and
+contributors, GPL-2.0-or-later like the rest of Furnace.

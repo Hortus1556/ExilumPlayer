@@ -1,0 +1,20 @@
+{
+  "uniqueId": "native.mgba",
+  "name": "mGBA",
+  "description": "Plays Game Boy Advance music (GSF). Carries blip_buf (LGPL-2.1-or-later) and inih (BSD-3-Clause).",
+  "artifactVersion": "0.10.5",
+  "website": "https://mgba.io",
+  "licenses": [
+    "mpl-2.0",
+    "lgpl-2.1-or-later",
+    "inih-bsd-3-clause"
+  ],
+  "developers": [
+    {
+      "name": "Vicki Pfau"
+    },
+    {
+      "name": "mGBA contributors"
+    }
+  ]
+}

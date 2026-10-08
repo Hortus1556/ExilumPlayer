@@ -1,0 +1,33 @@
+<!-- The same mark for a themed icon, which the launcher colours itself. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <!-- The stem, which is the E's spine. -->
+  <path
+      android:pathData="M50.22,37.62L50.22,69.73"
+      android:strokeColor="#FFFFFFFF"
+      android:strokeWidth="7.72"
+      android:strokeLineCap="round"/>
+  <!-- The three beams, which are its arms. -->
+  <path
+      android:pathData="M50.22,37.62L69.73,33.72"
+      android:strokeColor="#FFFFFFFF"
+      android:strokeWidth="7.72"
+      android:strokeLineCap="round"/>
+  <path
+      android:pathData="M50.22,49.81L65.66,46.73"
+      android:strokeColor="#FFFFFFFF"
+      android:strokeWidth="6.91"
+      android:strokeLineCap="round"/>
+  <path
+      android:pathData="M50.22,62L69.73,58.1"
+      android:strokeColor="#FFFFFFFF"
+      android:strokeWidth="6.91"
+      android:strokeLineCap="round"/>
+  <!-- The note's head. -->
+  <path
+      android:pathData="M34.5,75.26A10.24,7.31 -20 1,0 53.75,68.25A10.24,7.31 -20 1,0 34.5,75.26Z"
+      android:fillColor="#FFFFFFFF"/>
+</vector>

@@ -1,0 +1,75 @@
+diff --git a/src/engine/engine.h b/src/engine/engine.h
+index 27cf900..a623288 100644
+--- a/src/engine/engine.h
++++ b/src/engine/engine.h
+@@ -675,8 +675,18 @@ class DivEngine {
+   friend class DivExportSAPR;
+   friend class DivExportTiuna;
+   friend class DivExportZSM;
++  // Local addition (Exilum Player): the Android player's bridge, which seeks,
++  // measures subsongs and sets up a headless engine through members that are
++  // otherwise private. See decoder-furnace.cpp.
++  friend class ExilumFurnaceBridge;
+ 
+   public:
++    // Local addition (Exilum Player): how much faster than the song asks the
++    // ticks come, 1 for as written. Only the tick clock uses it - the chips
++    // still produce audio at the output rate - so the song gets faster or
++    // slower and its pitch stays where it is. Song time (totalSeconds and
++    // totalTicks) keeps counting at the song's own rate.
++    double exilumTempo=1.0;
+     DivSong song;
+     DivOrders* curOrders;
+     DivChannelData* curPat;
+diff --git a/src/engine/platform/sound/ymf278b/ymf278.h b/src/engine/platform/sound/ymf278b/ymf278.h
+index b0622ad..bdaa553 100644
+--- a/src/engine/platform/sound/ymf278b/ymf278.h
++++ b/src/engine/platform/sound/ymf278b/ymf278.h
+@@ -4,6 +4,7 @@
+ #include <vector>
+ #include <string>
+ #include <algorithm>
++#include <cstdint> // local addition (Exilum Player): uint8_t below, not otherwise included on every toolchain
+ 
+ #define UNREACHABLE while (1) assert(false)
+ 
+diff --git a/src/engine/playback.cpp b/src/engine/playback.cpp
+index faeb91c..ff6a9a8 100644
+--- a/src/engine/playback.cpp
++++ b/src/engine/playback.cpp
+@@ -1002,7 +1002,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
+       case 0xc0: case 0xc1: case 0xc2: case 0xc3: // set Hz
+         divider=(double)(((effect&0x3)<<8)|effectVal);
+         if (divider<1) divider=1;
+-        cycles=got.rate/divider;
++        cycles=got.rate/(divider*exilumTempo); // local change (Exilum Player): see exilumTempo
+         clockDrift=0;
+         subticks=0;
+         break;
+@@ -1156,7 +1156,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
+       case 0xf0: // set Hz by tempo
+         divider=(double)effectVal*2.0/5.0;
+         if (divider<1) divider=1;
+-        cycles=got.rate/divider;
++        cycles=got.rate/(divider*exilumTempo); // local change (Exilum Player): see exilumTempo
+         clockDrift=0;
+         subticks=0;
+         break;
+@@ -1562,10 +1562,13 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+     tickMult=1;
+   }
+   
+-  cycles=got.rate/(divider*tickMult);
+-  clockDrift+=fmod(got.rate,(double)(divider*tickMult));
+-  if (clockDrift>=(divider*tickMult)) {
+-    clockDrift-=(divider*tickMult);
++  // Local change (Exilum Player): the tick clock runs at exilumTempo times the
++  // song's own rate - see exilumTempo in engine.h.
++  const double exilumTickRate=divider*tickMult*exilumTempo;
++  cycles=got.rate/exilumTickRate;
++  clockDrift+=fmod(got.rate,exilumTickRate);
++  if (clockDrift>=exilumTickRate) {
++    clockDrift-=exilumTickRate;
+     cycles++;
+   }
+ 

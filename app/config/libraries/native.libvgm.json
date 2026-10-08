@@ -1,0 +1,15 @@
+{
+  "uniqueId": "native.libvgm",
+  "name": "libvgm",
+  "description": "Plays VGM, S98, DRO and GYM logs against emulations of their sound chips.",
+  "artifactVersion": "c8b998b",
+  "website": "https://github.com/ValleyBell/libvgm",
+  "licenses": [
+    "libvgm-mixed"
+  ],
+  "developers": [
+    {
+      "name": "Valley Bell and contributors"
+    }
+  ]
+}

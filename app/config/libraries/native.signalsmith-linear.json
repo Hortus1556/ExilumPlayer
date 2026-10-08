@@ -1,0 +1,15 @@
+{
+  "uniqueId": "native.signalsmith-linear",
+  "name": "Signalsmith Linear",
+  "description": "The FFT Signalsmith Stretch is built on.",
+  "artifactVersion": "0.3.1",
+  "website": "https://github.com/Signalsmith-Audio/linear",
+  "licenses": [
+    "signalsmith-linear-mit"
+  ],
+  "developers": [
+    {
+      "name": "Signalsmith Audio"
+    }
+  ]
+}
