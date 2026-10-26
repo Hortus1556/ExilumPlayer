@@ -8,6 +8,13 @@
  * CustomMade: Ivo Zoer's replay routine for Ron Klaren's music, on the Amiga
  * (1989-90), found in games as .cm, .rk or .rkb files.
  *
+ * A .cm is the module alone. A .rk - a "Ron Klaren sound module" - is the
+ * same module saved as an AmigaDOS program: a hunk header, then one hunk of
+ * code that opens with moveq #-1,d0 / rts, so that running it does nothing,
+ * and the words RON_KLAREN_SOUNDMODULE!, and then the module as a .cm has it.
+ * Both are found here; UADE plays the second kind only by trusting the file's
+ * name over its Eagleplayer's check, which it fails.
+ *
  * Not a data format either, strictly: a module is the replayer's own code
  * with its tables and samples behind it, exactly as it was linked into the
  * game, at whatever address that was. This follows the Eagleplayer
@@ -29,7 +36,10 @@
  */
 namespace custommade {
 
-/** Whether the bytes are a CustomMade module - the Eagleplayer's check. */
+/**
+ * Whether the bytes are a CustomMade module, alone or inside a program: the
+ * Eagleplayer's check, made on the module wherever it is.
+ */
 bool check(const uint8_t* data, size_t size);
 
 /** One Paula channel: its registers and where its DMA is. */
@@ -93,7 +103,10 @@ struct Module {
   int instruments = 0;
 };
 
-/** Finds the tables, as the Eagleplayer's InitPlayer does. False when they are not all there. */
+/**
+ * Finds the tables, as the Eagleplayer's InitPlayer does, in the module alone
+ * or inside a program. False when they are not all there.
+ */
 bool parse(const uint8_t* data, size_t size, Module& out);
 
 class Player {

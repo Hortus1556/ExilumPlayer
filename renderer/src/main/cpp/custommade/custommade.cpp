@@ -69,8 +69,8 @@ inline uint8_t readB(const uint8_t* d, size_t n, int64_t at) {
 
 }  // namespace
 
-// DTP_Check2
-bool check(const uint8_t* d, size_t n) {
+// DTP_Check2, on a module that starts where [d] does.
+static bool bare(const uint8_t* d, size_t n) {
   if (!d || n <= 3000) return false;
   const uint32_t first = readW(d, n, 0);
   if (first == 0x4EF9 || first == 0x4EB9) {
@@ -89,10 +89,60 @@ bool check(const uint8_t* d, size_t n) {
   return false;
 }
 
+/** How far into an AmigaDOS program's code hunk a module is looked for. */
+constexpr size_t kModuleSearch = 0x100;
+
+/**
+ * Where the module is: all of [d], or - for a program, as a .rk is - the
+ * module inside its first hunk. Sets [at] and [size] and says whether there
+ * is one. The program's addresses are its hunk's, from 0, and the module's
+ * own reckoning of where it was linked works them out like any other.
+ */
+static bool locate(const uint8_t* d, size_t n, size_t& at, size_t& size) {
+  if (bare(d, n)) {
+    at = 0;
+    size = n;
+    return true;
+  }
+  // HUNK_HEADER: no resident libraries, a table of hunks, then the first
+  // hunk, which has to be code or data. Its length is in longwords, under
+  // two bits that say what memory it wants.
+  if (!d || n < 32 || readL(d, n, 0) != 0x000003F3) return false;
+  int64_t o = 4;
+  for (uint32_t names = readL(d, n, o); names != 0; names = readL(d, n, o)) {
+    o += 4 + 4 * static_cast<int64_t>(names);
+    if (o >= static_cast<int64_t>(n)) return false;
+  }
+  const uint32_t first = readL(d, n, o + 8);
+  const uint32_t last = readL(d, n, o + 12);
+  if (last < first || last - first > 64) return false;
+  o += 16 + 4 * static_cast<int64_t>(last - first + 1);
+  const uint32_t kind = readL(d, n, o) & 0x3FFFFFFF;
+  if (kind != 0x3E9 && kind != 0x3EA) return false;  // HUNK_CODE, HUNK_DATA
+  const int64_t hunk = o + 8;
+  const int64_t hunkSize = static_cast<int64_t>(readL(d, n, o + 4) & 0x3FFFFFFF) * 4;
+  if (hunkSize <= 0 || hunk + hunkSize > static_cast<int64_t>(n)) return false;
+  for (int64_t skip = 0; skip < static_cast<int64_t>(kModuleSearch) && skip < hunkSize; skip += 2) {
+    if (bare(d + hunk + skip, static_cast<size_t>(hunkSize - skip))) {
+      at = static_cast<size_t>(hunk + skip);
+      size = static_cast<size_t>(hunkSize - skip);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool check(const uint8_t* d, size_t n) {
+  size_t at = 0, size = 0;
+  return locate(d, n, at, size);
+}
+
 // DTP_InitPlayer: every address below is a file offset, as if the module had
 // been loaded at 0.
-bool parse(const uint8_t* d, size_t n, Module& out) {
-  if (!check(d, n)) return false;
+bool parse(const uint8_t* data, size_t size, Module& out) {
+  size_t at = 0, n = 0;
+  if (!locate(data, size, at, n)) return false;
+  const uint8_t* d = data + at;
   int64_t origin = 0, songs = 0, table = 0, samples = 0;
   bool haveSongs = false, haveTable = false, haveSamples = false;
   uint16_t timer = 0;

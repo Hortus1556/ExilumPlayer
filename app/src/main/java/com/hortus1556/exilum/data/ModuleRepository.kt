@@ -95,10 +95,15 @@ class ModuleRepository(
      * formats is what changes when one is added, so the library remembers the
      * list it was tested against and sends the rejects back when it differs.
      * Once per process, before the first scan.
+     *
+     * A decoder can also learn to open files it turned away without its list
+     * changing - the .rk files CustomMade has always named, and only lately
+     * finds the module in - so the list is kept with [DECODER_REVISION], and a
+     * new revision sends the rejects back the same way.
      */
     private suspend fun retestAfterDecoderChanges() = formatsCheck.withLock {
         if (formatsChecked) return@withLock
-        val formats = Player.getFormats().sorted().joinToString(",")
+        val formats = Player.getFormats().sorted().joinToString(",") + ";r$DECODER_REVISION"
         if (prefs.getTestedFormats() != formats) {
             dao.markRejectedUntested()
             prefs.setTestedFormats(formats)
@@ -499,6 +504,13 @@ private const val VALIDATION_THREADS = 3
 
 /** Rows written per transaction by the full walk. */
 private const val INDEX_BATCH = 64
+
+/**
+ * Raised whenever a decoder comes to open files it used to turn away while
+ * opening the same extensions as before, so that those files are tested again.
+ * 1: CustomMade finds the module inside a Ron Klaren sound module (.rk).
+ */
+private const val DECODER_REVISION = 1
 
 /** Above this, a file whose extension no decoder opens is not read to be tested. */
 private const val UNCLAIMED_SIZE_LIMIT = 64L * 1024 * 1024

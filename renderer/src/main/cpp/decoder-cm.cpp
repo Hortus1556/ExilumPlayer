@@ -173,7 +173,13 @@ void publishVisuals(CmState& state, int64_t frameStamp) {
 
 }  // namespace
 
-bool cm_decoder_probe(const uint8_t* data, size_t size) { return custommade::check(data, size); }
+// The tables have to be found as well as the routine: a module whose routine
+// is a version this one cannot read - there is one among the .rk files - is
+// turned away here, rather than listed and then failing to load.
+bool cm_decoder_probe(const uint8_t* data, size_t size) {
+  custommade::Module module;
+  return custommade::parse(data, size, module);
+}
 
 bool cm_decoder_load(const uint8_t* data, size_t size, int sampleRate) {
   CmState& state = CmState::instance();
