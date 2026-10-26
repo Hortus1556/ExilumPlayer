@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -97,9 +96,7 @@ private val LABEL_TEXT = arrayOf("63", "160", "400", "1k", "2.5k", "6.3k", "16k"
  *
  * Drawn the way the rest of the player is made: the segments are lozenges
  * with the light of a glass bead on them, the dark ones are still there as a
- * faint grid, and where the controls over the view are glass the columns are
- * mirrored below their feet, under that glass, which bends and softens them
- * into a glow that moves with the music.
+ * faint grid.
  *
  * It shows the output itself (see spectrum.h on the native side), so every
  * engine has it, the equalizer shows in it, and the volume does not.
@@ -109,16 +106,11 @@ private val LABEL_TEXT = arrayOf("63", "160", "400", "1k", "2.5k", "6.3k", "16k"
  * @param live whether this is the view on screen, or the one a swipe is
  *   bringing in: all the views stay built, and one that is out of sight asks
  *   for no frames
- * @param bottomInset how much of the bottom of the view is under the controls
- * @param reflect whether to mirror the columns into that part - where the
- *   controls are glass
  */
 @Composable
 fun SpectrumView(
     playing: Boolean,
     live: Boolean,
-    bottomInset: Dp,
-    reflect: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val liquidColors = LocalLiquidColors.current
@@ -167,7 +159,7 @@ fun SpectrumView(
         // canvases are recorded into the box's, and every move of the light
         // had all of this recorded again with it.
         Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) {
-            val grid = layout.of(this, bottomInset)
+            val grid = layout.of(this)
             if (!grid.valid) return@Canvas
             meter.columns = grid.columns
 
@@ -212,19 +204,15 @@ fun SpectrumView(
         }
 
         // ---- Layer 2: the light -------------------------------------------
-        // The lit segments, the caps, and the columns' mirror under the
-        // controls. Redrawn when the meter says something moved - and a
+        // The lit segments and the caps. Redrawn when the meter says something moved - and a
         // handful of copies a column when it is: a whole column lit is drawn
         // once, into a picture, and each frame shows as much of it as is lit.
         Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) {
             @Suppress("UNUSED_EXPRESSION") meter.tick
-            val grid = layout.of(this, bottomInset)
+            val grid = layout.of(this)
             if (!grid.valid) return@Canvas
 
-            // How many rows of mirror fit under the controls, and where it starts.
-            val mirrorTop = (size.height - bottomInset.toPx() + 2.dp.toPx()).roundToInt()
-            val mirrorRows = if (reflect) min(grid.rows, ((size.height - mirrorTop) / grid.rowPitch).toInt()) else 0
-            val art = sprites.of(this, grid, colors, mirrorRows)
+            val art = sprites.of(this, grid, colors)
             val row = grid.rowPitch.toInt()
             val bottom = grid.bottom.toInt()
 
@@ -266,28 +254,6 @@ fun SpectrumView(
                         dstSize = IntSize(art.width, row),
                         alpha = passing,
                     )
-                }
-                val mirror = art.mirror
-                if (mirror != null) {
-                    val rows = min(full, mirrorRows)
-                    if (rows > 0) {
-                        drawImage(
-                            image = mirror,
-                            srcSize = IntSize(art.width, rows * row),
-                            dstOffset = IntOffset(left, mirrorTop),
-                            dstSize = IntSize(art.width, rows * row),
-                        )
-                    }
-                    if (passing > 0.01f && full < mirrorRows) {
-                        drawImage(
-                            image = mirror,
-                            srcOffset = IntOffset(0, full * row),
-                            srcSize = IntSize(art.width, row),
-                            dstOffset = IntOffset(left, mirrorTop + full * row),
-                            dstSize = IntSize(art.width, row),
-                            alpha = passing,
-                        )
-                    }
                 }
 
                 val cap = meter.cap[column].coerceIn(0f, 1f)
@@ -358,17 +324,14 @@ private fun nearestColumn(hz: Float, columns: Int): Int {
 private class GridCache {
     private var width = -1f
     private var height = -1f
-    private var inset = -1f
     private var grid: Grid? = null
 
-    fun of(scope: DrawScope, bottomInset: Dp): Grid {
-        val insetPx = with(scope) { bottomInset.toPx() }
+    fun of(scope: DrawScope): Grid {
         val kept = grid
-        if (kept != null && scope.size.width == width && scope.size.height == height && insetPx == inset) return kept
+        if (kept != null && scope.size.width == width && scope.size.height == height) return kept
         width = scope.size.width
         height = scope.size.height
-        inset = insetPx
-        return Grid.of(scope, bottomInset).also { grid = it }
+        return Grid.of(scope).also { grid = it }
     }
 }
 
@@ -410,11 +373,11 @@ private class Grid(
     companion object {
         private val None = Grid(false, 0, 0, 0f, 0f, 0f, 0f, 0f, Size.Zero, CornerRadius.Zero)
 
-        fun of(scope: DrawScope, bottomInset: Dp): Grid = with(scope) {
+        fun of(scope: DrawScope): Grid = with(scope) {
             val side = SIDE_PADDING.toPx()
             val width = size.width - side * 2f
             val top = LETTERING_HEIGHT.toPx()
-            val bottom = floor(size.height - bottomInset.toPx() - LABEL_HEIGHT.toPx() - 6.dp.toPx())
+            val bottom = floor(size.height - LABEL_HEIGHT.toPx() - 6.dp.toPx())
             val height = bottom - top
             if (width <= 0f || height <= 0f) return None
 
@@ -439,15 +402,13 @@ private class Grid(
 }
 
 /**
- * The pictures the light is made of: a column with every row lit, the soft
- * glow one throws, and the column again upside down and fading, for the
- * mirror. Made when the grid or the colours change, which is seldom; copied
- * from, every frame.
+ * The pictures the light is made of: a column with every row lit, and the
+ * soft glow one throws. Made when the grid or the colours change, which is
+ * seldom; copied from, every frame.
  */
 private class Sprites(
     val column: ImageBitmap,
     val glow: ImageBitmap,
-    val mirror: ImageBitmap?,
     /** The column's width, which is a column's pitch. */
     val width: Int,
     /** How far the glow's picture reaches beyond the column it is for, on every side. */
@@ -472,25 +433,20 @@ private class SpriteCache {
     )
 
     private var key: Key? = null
-    private var mirrorRows = -1
     private var sprites: Sprites? = null
 
-    fun of(scope: DrawScope, grid: Grid, colors: SpectrumColors, mirrorRows: Int): Sprites {
+    fun of(scope: DrawScope, grid: Grid, colors: SpectrumColors): Sprites {
         val key = Key(grid.columnPitch, grid.rowPitch, grid.rows, grid.segment, grid.corner, colors, scope.density)
-        val kept = sprites?.takeIf { key == this.key }
-        if (kept != null && mirrorRows == this.mirrorRows) return kept
+        sprites?.takeIf { key == this.key }?.let { return it }
         val density = Density(scope.density, scope.fontScale)
         val margin = ceil(grid.columnPitch * 0.55f).toInt()
-        // The mirror alone, where only how much of it shows has changed.
         val made = Sprites(
-            column = kept?.column ?: column(density, grid, colors),
-            glow = kept?.glow ?: glow(density, grid, colors, margin),
-            mirror = if (mirrorRows > 0) mirror(density, grid, colors, mirrorRows) else null,
+            column = column(density, grid, colors),
+            glow = glow(density, grid, colors, margin),
             width = grid.columnPitch.toInt(),
             glowMargin = margin,
         )
         this.key = key
-        this.mirrorRows = mirrorRows
         sprites = made
         return made
     }
@@ -500,20 +456,6 @@ private class SpriteCache {
         return picture(density, grid.columnPitch.toInt(), grid.rows * row) {
             for (r in 0 until grid.rows) {
                 drawBead(colors, grid, grid.gapX / 2f, (grid.rows - 1 - r) * row + grid.inRow, colors.rowColor(grid.rowHeight(r)), 1f)
-            }
-        }
-    }
-
-    /** Upside down - the feet at the top - and fainter the further from them, as on a polished shelf. */
-    private fun mirror(density: Density, grid: Grid, colors: SpectrumColors, rows: Int): ImageBitmap {
-        val row = grid.rowPitch.toInt()
-        return picture(density, grid.columnPitch.toInt(), rows * row) {
-            for (r in 0 until rows) {
-                val depth = 1f - r / rows.toFloat()
-                drawBead(
-                    colors, grid, grid.gapX / 2f, r * row + grid.inRow, colors.rowColor(grid.rowHeight(r)),
-                    colors.mirror * depth * depth,
-                )
             }
         }
     }
@@ -643,7 +585,6 @@ private class SpectrumColors(
     val sheen: Float,
     val edge: Float,
     val glow: Float,
-    val mirror: Float,
 ) {
     /** The colour of the row [height] of the way up: 0 the bottom, 1 the top. Fixed to the row, not to the level. */
     fun rowColor(height: Float): Color = when {
@@ -665,7 +606,7 @@ private fun spectrumColors(colors: LiquidColors): SpectrumColors = if (colors.is
         cap = Color.White.copy(alpha = 0.92f),
         label = colors.secondaryLabel,
         lettering = colors.tertiaryLabel,
-        body = 0.96f, lift = 0.22f, shade = 0.30f, sheen = 0.42f, edge = 0.55f, glow = 0.34f, mirror = 0.60f,
+        body = 0.96f, lift = 0.22f, shade = 0.30f, sheen = 0.42f, edge = 0.55f, glow = 0.34f,
     )
 } else {
     // On a light page there is no glow to be had: the colours go deeper to
@@ -681,6 +622,6 @@ private fun spectrumColors(colors: LiquidColors): SpectrumColors = if (colors.is
         cap = Color.Black.copy(alpha = 0.78f),
         label = colors.secondaryLabel,
         lettering = colors.tertiaryLabel,
-        body = 1f, lift = 0.30f, shade = 0.16f, sheen = 0.55f, edge = 0.75f, glow = 0.20f, mirror = 0.45f,
+        body = 1f, lift = 0.30f, shade = 0.16f, sheen = 0.55f, edge = 0.75f, glow = 0.20f,
     )
 }

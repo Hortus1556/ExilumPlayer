@@ -167,7 +167,6 @@ fun LyricsView(
     lyrics: Lyrics,
     visuals: PlaybackVisuals,
     live: () -> Boolean,
-    bottomInset: Dp,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -184,19 +183,18 @@ fun LyricsView(
                 // Lines come in and go out through a fade at either end, not across an edge.
                 val height = this.size.height.coerceAtLeast(1f)
                 val fade = (56.dp.toPx() / height).coerceAtMost(0.2f)
-                val floor = (1f - bottomInset.toPx() / height).coerceIn(0.5f, 1f)
                 drawRect(
                     brush = Brush.verticalGradient(
                         0f to Color.Transparent,
                         fade to Color.Black,
-                        floor - fade to Color.Black,
-                        floor to Color.Transparent,
+                        1f - fade to Color.Black,
+                        1f to Color.Transparent,
                     ),
                     blendMode = BlendMode.DstIn,
                 )
             }
         if (!lyrics.synced) {
-            PlainWords(lyrics, style, bottomInset, edge)
+            PlainWords(lyrics, style, edge)
         } else {
             TimedWords(lyrics, visuals, live, style, focus, maxHeight - focus, onSeek, edge)
         }
@@ -204,11 +202,11 @@ fun LyricsView(
 }
 
 @Composable
-private fun PlainWords(lyrics: Lyrics, style: TextStyle, bottomInset: Dp, modifier: Modifier) {
+private fun PlainWords(lyrics: Lyrics, style: TextStyle, modifier: Modifier) {
     val smaller = style.copy(fontSize = style.fontSize * 0.74f, fontWeight = FontWeight.SemiBold, lineHeight = 1.3.em)
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 48.dp, bottom = bottomInset + 48.dp),
+        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 48.dp, bottom = 48.dp),
     ) {
         itemsIndexed(lyrics.lines) { _, line ->
             if (line.text.isEmpty()) Box(Modifier.height(22.dp)) else Text(line.text, style = smaller, modifier = Modifier.padding(vertical = 5.dp))

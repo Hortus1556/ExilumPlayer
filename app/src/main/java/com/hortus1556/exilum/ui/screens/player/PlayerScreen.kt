@@ -1215,14 +1215,6 @@ private fun PlayerScreenContent(
             }
         },
         content = { contentPadding ->
-            // How much of the bottom of a view lies under the controls: their
-            // corners' worth under One UI's card, and none under Liquid Glass,
-            // where the views end at the panel's edge. Most views scroll and
-            // do not mind; one that stands on a baseline does.
-            val viewBottomInset = when {
-                oneUi -> minOf(OneUiDimens.CardCorner, contentPadding.calculateBottomPadding())
-                else -> 0.dp
-            }
             Box(
                 // Deliberately NOT declaring preferredFrameRate here anymore.
                 // This modifier (tried at both FrameRateCategory.High and 30f
@@ -1237,22 +1229,10 @@ private fun PlayerScreenContent(
                 // removes that variable entirely.
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(
-                        // Under One UI's panel as far as its corners reach,
-                        // so what shows past them is the view, not a gap.
-                        if (oneUi) {
-                            PaddingValues(
-                                top = contentPadding.calculateTopPadding(),
-                                bottom = (contentPadding.calculateBottomPadding() - OneUiDimens.CardCorner)
-                                    .coerceAtLeast(0.dp),
-                            )
-                        } else {
-                            // Under Liquid Glass too the views stop where the
-                            // panel starts: its edge is where they end, not a
-                            // pane laid over the bottom of them.
-                            contentPadding
-                        }
-                    )
+                    // The views stop where the controls start, in either
+                    // style: the panel's edge is where they end, not a pane
+                    // laid over the bottom of them.
+                    .padding(contentPadding)
 
             ) {
                 // beyondViewportPageCount stays at its default of 0: these are
@@ -1355,9 +1335,6 @@ private fun PlayerScreenContent(
                                 playing = visuals.active,
                                 // Live from the moment a swipe heads for it.
                                 live = page == pagerState.currentPage || page == pagerState.targetPage,
-                                bottomInset = viewBottomInset,
-                                // Under glass, the columns' mirror shows through it.
-                                reflect = liquid,
                             )
 
                             PlayerPage.Lyrics -> lyrics?.let { words ->
@@ -1366,7 +1343,6 @@ private fun PlayerScreenContent(
                                     lyrics = words,
                                     visuals = visuals,
                                     live = { onScreen.value },
-                                    bottomInset = viewBottomInset,
                                     onSeek = { onAction(PlayerAction.OnSeek(it)) },
                                 )
                             } ?: Unit
