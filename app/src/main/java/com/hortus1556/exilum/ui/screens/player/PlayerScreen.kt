@@ -1215,12 +1215,11 @@ private fun PlayerScreenContent(
             }
         },
         content = { contentPadding ->
-            // How much of the bottom of a view lies under the controls: all of
-            // their height under Liquid Glass, where the view runs on beneath
-            // them, and their corners' worth under One UI's card. Most views
-            // scroll and do not mind; one that stands on a baseline does.
+            // How much of the bottom of a view lies under the controls: their
+            // corners' worth under One UI's card, and none under Liquid Glass,
+            // where the views end at the panel's edge. Most views scroll and
+            // do not mind; one that stands on a baseline does.
             val viewBottomInset = when {
-                liquid -> contentPadding.calculateBottomPadding()
                 oneUi -> minOf(OneUiDimens.CardCorner, contentPadding.calculateBottomPadding())
                 else -> 0.dp
             }
@@ -1247,11 +1246,10 @@ private fun PlayerScreenContent(
                                 bottom = (contentPadding.calculateBottomPadding() - OneUiDimens.CardCorner)
                                     .coerceAtLeast(0.dp),
                             )
-                        } else if (liquid) {
-                            // All the way down, under the panel: it is glass,
-                            // and what it is over is the view.
-                            PaddingValues(top = contentPadding.calculateTopPadding())
                         } else {
+                            // Under Liquid Glass too the views stop where the
+                            // panel starts: its edge is where they end, not a
+                            // pane laid over the bottom of them.
                             contentPadding
                         }
                     )
