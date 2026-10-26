@@ -54,8 +54,8 @@ android {
         minSdk = 26 // Oreo
         targetSdk = 37 // Cinnamon Bun (terrible codename).
 
-        versionCode = 21
-        versionName = "1.0"
+        versionCode = 22
+        versionName = "1.0.1"
 
         //noinspection ChromeOsAbiSupport
         ndk.abiFilters += listOf("armeabi-v7a", "arm64-v8a")
